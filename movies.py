@@ -1,7 +1,7 @@
 """My Film Data Bank"""
 import random
 from datetime import date
-import movie_storage as sm
+import movie_storage_sql as sm
 
 RED = "\033[91m"
 GREEN = "\033[92m"
