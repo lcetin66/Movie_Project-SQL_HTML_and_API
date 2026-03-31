@@ -1,4 +1,11 @@
+"""
+This module provides JSON-based storage functionality for the movie project.
+It handles reading from and writing to a JSON file named #data.json.
+"""
+
 import json
+
+
 def get_movies():
     """
     Returns a dictionary of dictionaries that
@@ -8,23 +15,25 @@ def get_movies():
     file and returns the data.
     """
     try:
-        with open("#data.json", "r") as fileobject:
+        with open("#data.json", "r", encoding="utf-8") as fileobject:
             data = json.load(fileobject)
     except FileNotFoundError:
         data = {}
-        with open("#data.json", "w") as fileobject:
+        with open("#data.json", "w", encoding="utf-8") as fileobject:
             json.dump(data, fileobject, indent=4)
     return data
+
 
 def save_movies(movies):
     """
     Save movies to the movie's database.
     """
     try:
-        with open("#data.json", "w") as fileobject:
+        with open("#data.json", "w", encoding="utf-8") as fileobject:
             json.dump(movies, fileobject, indent=4)
     except IndentationError:
         print("IndentationError: unexpected indent")
+
 
 def add_movie(title, year, rating):
     """
@@ -38,6 +47,7 @@ def add_movie(title, year, rating):
         "rating": rating
     }
     save_movies(movies)
+
 
 def delete_movie(title):
     """
@@ -55,8 +65,9 @@ def delete_movie(title):
     if found_key is None:
         return
 
-    del movies[title]
+    del movies[found_key]
     save_movies(movies)
+
 
 def update_movie(title, rating):
     """
