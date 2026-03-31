@@ -24,45 +24,67 @@ with engine.connect() as connection:
     """))
     connection.commit()
 
+
 def list_movies():
     """Retrieve all movies from the database."""
     with engine.connect() as conn:
-        result = conn.execute(text("SELECT title, year, rating FROM movies"))
+        result = conn.execute(text("""
+            SELECT 
+                title, year, rating 
+            FROM movies
+        """))
         movies = result.fetchall()
 
     return {row[0]: {"year": row[1], "rating": row[2]} for row in movies}
+
 
 def add_movie(title, year, rating):
     """Add a new movie to the database."""
     with engine.connect() as conn:
         try:
             conn.execute(text("""
-                INSERT INTO movies (title, year, rating)
-                VALUES (:title, :year, :rating)
+                INSERT 
+                INTO movies 
+                    (title, year, rating)
+                VALUES 
+                    (:title, :year, :rating)
             """), {"title": title, "year": year, "rating": rating})
             conn.commit()
             print(f"Movie '{title}' added successfully.")
         except SQLAlchemyError as e:
             print(f"Error: {e}")
 
+
 def delete_movie(title):
     """Delete a movie from the database."""
     with engine.connect() as conn:
         try:
-            conn.execute(text("DELETE FROM movies WHERE title = :title"),
+            conn.execute(text("""
+                DELETE 
+                FROM movies 
+                WHERE title = :title
+            """),
                              {"title": title})
             conn.commit()
             print(f"Movie '{title}' deleted successfully.")
         except SQLAlchemyError as e:
             print(f"Error: {e}")
 
+
 def update_movie(title, rating):
     """Update a movie's rating in the database."""
     with engine.connect() as conn:
         try:
-            conn.execute(text("UPDATE movies SET rating = :rating WHERE title = :title"),
+            conn.execute(text("""
+                UPDATE 
+                    movies 
+                SET 
+                    rating = :rating 
+                WHERE 
+                    title = :title
+            """),
                                {"title": title, "rating": rating})
             conn.commit()
-            print(f'Movie"{title}" updated successfully.')
+            print(f"Movie '{title}' updated successfully.")
         except SQLAlchemyError as e:
             print(f"Error: {e}")
