@@ -2,7 +2,6 @@
 This module provides JSON-based storage functionality for the movie project.
 It handles reading from and writing to a JSON file named #data.json.
 """
-
 import json
 
 

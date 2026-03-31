@@ -1,14 +1,9 @@
 """My Film Data Bank"""
 
 import random
-from datetime import date
+import requests
 import movie_storage_sql as storage
-
-
-RED = "\033[91m"
-GREEN = "\033[92m"
-RESET = "\033[0m"
-
+from trm_colors import RED, GREEN, RESET
 
 def get_non_empty_input(prompt):
     """
@@ -34,13 +29,73 @@ def command_list_movies(movies):
     print(f"{len(movies)} movies in total")
     for movie, data in movies.items():
         print(f"{movie} ({data['year']}): {data['rating']}")
+        
+
+def get_omdb_user_api_key():
+    """
+    Get and validate API key from user.
+    Returns the key if valid, or None if invalid or blank.
+    """
+    print("\n" + "=" * 60)
+    print("OMDB API Key Registration")
+    print("=" * 60)
+    print("\nTo use the movie search feature, you need an API key from OMDB.")
+    print("You can get a free API key by registering at:\nhttps://www.omdbapi.com/apikey.aspx")
+    print("\n" + "=" * 60 + "\n")
+    0
+    api_key = input("Please enter your OMDB API key: ").strip()
+    if not api_key:
+        print(f"{RED}API key can't be left blank!{RESET}")
+        return None
+        
+    url = f"http://www.omdbapi.com/?apikey={api_key}&s=test"
+    try:
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        
+        if data.get("Response") == "False":
+            error_msg = data.get("Error", "Unknown error")
+            print(f"{RED}Error: {error_msg}{RESET}")
+            return None
+        
+        print(f"{GREEN}API Key is valid.{RESET}")
+        return api_key # Return the key if valid
+        
+    except requests.exceptions.RequestException as e:
+        print(f"{RED}Connection error: {e}{RESET}")
+        return None
+    
+
+def get_omdb_movie_info(api_key, title):
+    """
+    Get movie information from OMDb API.
+    """
+    url = f"http://www.omdbapi.com/?apikey={api_key}&t={title}"
+    try:
+        response = requests.get(url, timeout=10)
+        movie_data = response.json()
+        
+        if movie_data.get("Response") == "False":
+            error_msg = movie_data.get("Error", "Unknown error")
+            print(f"{RED}Error: {error_msg}{RESET}")
+            return None
+        
+        return movie_data
+    except requests.exceptions.RequestException as e:
+        print(f"{RED}Connection error: {e}{RESET}")
+        return None
+
 
 
 def command_add_movie(movies):
     """
-    Prompt the user to enter a movie title and a rating.
-    Validation of the input is not required (ratings between 1 and 10 are accepted).
+    Prompt the user to enter a movie title, fetch its info from OMDb API,
+    and add it to the database.
     """
+    api_key = get_omdb_user_api_key()
+    if not api_key:
+        return
+
     while True:
         title = get_non_empty_input("Enter new movie name: ")
         if title is None:
@@ -49,38 +104,45 @@ def command_add_movie(movies):
             print(f'Movie "{RED}{title}{RESET}" already exists!')
             continue
 
-        year_input = get_non_empty_input("Enter a year: ")
-        if year_input is None:
-            return
+        movie_data = get_omdb_movie_info(api_key, title)
+        
+        poster = None
+        if not movie_data or movie_data.get("Response") == "False":
+            if input("Would you like to manually enter the movie details? (y/n): ").lower() == "n":
+                continue
+            
+            # Manual Input Fallback
+            year_input = get_non_empty_input("Enter a year: ")
+            if year_input is None: 
+                return
+            try:
+                year = int(year_input)
+            except ValueError:
+                print("Invalid year."); 
+                continue
 
-        try:
-            year = int(year_input)
-        except ValueError:
-            print("Invalid year of manufacture.")
-            return
+            rating_input = get_non_empty_input("Enter new movie rating (0-10): ")
+            if rating_input is None: 
+                return
+            try:
+                rating = float(rating_input)
+            except ValueError:
+                print("Invalid rating."); 
+                continue
+        else:
+            # API Success - Use data from OMDb
+            title = movie_data.get("Title", title)
+            # Fetch first 4 digits of Year (handles "2008-2013" cases)
+            year_str = movie_data.get("Year", "0")
+            year_digits = ''.join(filter(str.isdigit, year_str))
+            year = int(year_digits[:4]) if year_digits else 0
+            rating = float(movie_data.get("imdbRating", "0"))
+            poster = movie_data.get("Poster", "")
+            print(f"Movie found: {GREEN}{title}{RESET} ({year}) - Rating: {rating}")
 
-        current_year = date.today().year
-        if year < 1888 or year > current_year:
-            print("Invalid year of manufacture.")
-            return
-
-        rating_input = get_non_empty_input("Enter new movie rating (0-10): ")
-        if rating_input is None:
-            return
-
-        try:
-            rating = float(rating_input)
-        except ValueError:
-            print("Invalid rating.")
-            continue
-
-        if not 0 <= rating <= 10:
-            print("Invalid rating.")
-            continue
-
-        storage.add_movie(title, year, rating)
-        print(f'Movie "{GREEN}{title}{RESET}" successfully added.')
+        storage.add_movie(title, year, rating, poster)
         return
+
 
 
 def command_delete_movie(movies):
@@ -104,7 +166,6 @@ def command_delete_movie(movies):
             continue
 
         storage.delete_movie(found_key)
-        print(f"Movie {RED}{found_key}{RESET} successfully {RED}deleted{RESET}.")
         enter_to_continue()
         break
 
