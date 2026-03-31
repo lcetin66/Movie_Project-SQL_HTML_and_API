@@ -1,12 +1,13 @@
 """My Film Data Bank"""
+
 import random
 from datetime import date
 import movie_storage_sql as storage
 
+
 RED = "\033[91m"
 GREEN = "\033[92m"
 RESET = "\033[0m"
-
 
 
 def get_non_empty_input(prompt):
@@ -27,11 +28,13 @@ def get_non_empty_input(prompt):
 
         return value
 
+
 def command_list_movies(movies):
     """Retrieve and display all movies from the database."""
     print(f"{len(movies)} movies in total")
     for movie, data in movies.items():
         print(f"{movie} ({data['year']}): {data['rating']}")
+
 
 def command_add_movie(movies):
     """
@@ -105,6 +108,7 @@ def command_delete_movie(movies):
         enter_to_continue()
         break
 
+
 def command_update_movie(movies):
     """
     If the film exists, the user will be prompted to enter a new rating.
@@ -137,6 +141,7 @@ def command_update_movie(movies):
         print(f'Movie "{GREEN}{found_key}{RESET}" successfully updated.')
         break
 
+
 def print_movies_by_rating(movies):
     """
     It prints the names of films with a specific rating. title: "Best" or "Worst"
@@ -168,6 +173,7 @@ def print_movies_by_rating(movies):
     print()
     return ratings, best_movies, worst_movies, sum_of_ratings
 
+
 def movie_statistics(movies):
     """
     Output various statistics about the films in the database:
@@ -197,6 +203,7 @@ def movie_statistics(movies):
 
     print(f"Median rating: {GREEN}{round(median_rating, 1)}{RESET}")
 
+
 def random_movie_selection(movies):
     """
     Output a random movie from the database along with its rating.
@@ -205,6 +212,7 @@ def random_movie_selection(movies):
     rating = movies[random_movie]["rating"]
     print(f"Your movie for tonight: {random_movie}, "
           f"it's rated {GREEN}{rating}{RESET}")
+
 
 def movie_part_searching(movies):
     """
@@ -220,6 +228,7 @@ def movie_part_searching(movies):
 
     if not found:
         print(f"{RED}Movie not found{RESET}")
+
 
 def movies_sorted_by_rating(movies):
     """
@@ -240,6 +249,7 @@ def movies_sorted_by_rating(movies):
             year = movies[movie]["year"]
             print(f"{movie} ({year}), {GREEN}{rating}{RESET}")
     return movies_by_rating
+
 
 def movies_sorted_by_year(movies):
     """
@@ -268,6 +278,7 @@ def movies_sorted_by_year(movies):
         for movie in movie_list:
             rating = movies[movie]["rating"]
             print(f"{movie} {GREEN}{year}{RESET}, {rating}")
+
 
 def menu_selection(movies):
     """
@@ -304,6 +315,7 @@ def menu_selection(movies):
         except ValueError:
             print(f"{RED}Your selection must be an integer between 0-9!{RESET}")
 
+
 def start_menu():
     """
     Menu list that opens after each transaction
@@ -325,6 +337,7 @@ def start_menu():
     for menu_list in menu:
         print(menu_list)
     print()
+
 
 def enter_to_continue():
     """
