@@ -1,11 +1,13 @@
 """My Film Data Bank"""
 import random
 from datetime import date
-import movie_storage_sql as sm
+import movie_storage_sql as storage
 
 RED = "\033[91m"
 GREEN = "\033[92m"
 RESET = "\033[0m"
+
+
 
 def get_non_empty_input(prompt):
     """
@@ -25,19 +27,13 @@ def get_non_empty_input(prompt):
 
         return value
 
-def list_movies(movies):
-    """
-    Display all films along with their ratings.
-    Additionally, show the total number of films in the database.
-    """
-    print(f"{RED}{len(movies)}{RESET} movies in total")
+def command_list_movies(movies):
+    """Retrieve and display all movies from the database."""
+    print(f"{len(movies)} movies in total")
+    for movie, data in movies.items():
+        print(f"{movie} ({data['year']}): {data['rating']}")
 
-    for movie, info in movies.items():
-        year = info.get("year", "Unknown")
-        rating = info.get("rating", "N/A")
-        print(f"{movie} ({year}): {GREEN}{rating}{RESET}")
-
-def add_movie(movies):
+def command_add_movie(movies):
     """
     Prompt the user to enter a movie title and a rating.
     Validation of the input is not required (ratings between 1 and 10 are accepted).
@@ -46,13 +42,10 @@ def add_movie(movies):
         title = get_non_empty_input("Enter new movie name: ")
         if title is None:
             return
-
-        # duplicate check
         if any(movie.lower() == title.lower() for movie in movies):
             print(f'Movie "{RED}{title}{RESET}" already exists!')
             continue
 
-        # year
         year_input = get_non_empty_input("Enter a year: ")
         if year_input is None:
             return
@@ -68,25 +61,26 @@ def add_movie(movies):
             print("Invalid year of manufacture.")
             return
 
-        # rating
-        if year < 1888 or year > current_year:
-            print("Invalid year of manufacture.")
+        rating_input = get_non_empty_input("Enter new movie rating (0-10): ")
+        if rating_input is None:
             return
 
-            # Rating
-        while True:
-            try:
-                rating = float(input("Enter new movie rating (0-10): "))
-                if 0 <= rating <= 10:
-                    break
-            except ValueError:
-                print(f"{RED}Enter a rating between 0 and 10!{RESET}")
+        try:
+            rating = float(rating_input)
+        except ValueError:
+            print("Invalid rating.")
+            continue
 
-        sm.add_movie(title, year, rating)
+        if not 0 <= rating <= 10:
+            print("Invalid rating.")
+            continue
+
+        storage.add_movie(title, year, rating)
         print(f'Movie "{GREEN}{title}{RESET}" successfully added.')
         return
 
-def delete_movie(movies):
+
+def command_delete_movie(movies):
     """
     Prompt the user to enter a movie title and then delete it from the database.
     If the movie doesn't exist, an error message will be displayed, and the menu will reappear.
@@ -106,12 +100,12 @@ def delete_movie(movies):
             print(f'Movie "{RED}{del_movie_name}{RESET}" does not exist!')
             continue
 
-        sm.delete_movie(found_key)
+        storage.delete_movie(found_key)
         print(f"Movie {RED}{found_key}{RESET} successfully {RED}deleted{RESET}.")
         enter_to_continue()
         break
 
-def update_movie(movies):
+def command_update_movie(movies):
     """
     If the film exists, the user will be prompted to enter a new rating.
     The film's rating will then be updated in the database. Input validation is not required.
@@ -139,7 +133,7 @@ def update_movie(movies):
             except ValueError:
                 print(f"{RED}Enter a number between 0 and 10!{RESET}")
 
-        sm.update_movie(found_key, edited_movie_rating)
+        storage.update_movie(found_key, edited_movie_rating)
         print(f'Movie "{GREEN}{found_key}{RESET}" successfully updated.')
         break
 
@@ -182,6 +176,10 @@ def movie_statistics(movies):
     - Best film
     - Worst film
     """
+    if not movies:
+        print(f"{RED}No movies found to calculate statistics.{RESET}")
+        return
+
     ratings, _, _, total_rating = print_movies_by_rating(movies)
 
     # average
@@ -271,17 +269,16 @@ def movies_sorted_by_year(movies):
             rating = movies[movie]["rating"]
             print(f"{movie} {GREEN}{year}{RESET}, {rating}")
 
-def menu_selection(storage):
+def menu_selection(movies):
     """
     Movie database menu selection
     """
     while True:
-        movies = storage.get_movies()
         actions = {
-            1: lambda: list_movies(movies),
-            2: lambda: add_movie(movies),
-            3: lambda: delete_movie(movies),
-            4: lambda: update_movie(movies),
+            1: lambda: command_list_movies(movies),
+            2: lambda: command_add_movie(movies),
+            3: lambda: command_delete_movie(movies),
+            4: lambda: command_update_movie(movies),
             5: lambda: movie_statistics(movies),
             6: lambda: random_movie_selection(movies),
             7: lambda: movie_part_searching(movies),
@@ -290,7 +287,7 @@ def menu_selection(storage):
         }
 
         try:
-            menu_choice = int(input("Enter choice (0-8): "))
+            menu_choice = int(input("Enter choice (0-9): "))
             print()
 
             if menu_choice == 0:
@@ -298,14 +295,14 @@ def menu_selection(storage):
                 break
 
             if menu_choice not in actions:
-                print(f"Your selection must be an integer between {RED}0-8!{RESET}")
+                print(f"Your selection must be an integer between {RED}0-9!{RESET}")
                 continue
 
             actions[menu_choice]()
             enter_to_continue()
 
         except ValueError:
-            print(f"{RED}Your selection must be an integer between 0-8!{RESET}")
+            print(f"{RED}Your selection must be an integer between 0-9!{RESET}")
 
 def start_menu():
     """
@@ -341,11 +338,12 @@ def enter_to_continue():
             start_menu()
             break
 
-def main():
-    """Dictionary to store the movies and the rating"""
 
+def main():
+    """Main function to run the movie database application."""
     start_menu() # Menu list
-    menu_selection(sm) # Menu choice
+    movies = storage.list_movies()
+    menu_selection(movies) # Menu choice
 
 
 if __name__ == "__main__":

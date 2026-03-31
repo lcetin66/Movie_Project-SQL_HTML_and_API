@@ -1,10 +1,16 @@
+"""
+This module provides SQL-based storage functionality for the movie project.
+It handles database connection, table creation, and CRUD operations for movies using SQLAlchemy.
+"""
+
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 
 # Define the database URL
 DB_URL = "sqlite:///movies.db"
 
 # Create the engine
-engine = create_engine(DB_URL, echo=True)
+engine = create_engine(DB_URL, echo=False)
 
 # Create the movies table if it does not exist
 with engine.connect() as connection:
@@ -20,27 +26,43 @@ with engine.connect() as connection:
 
 def list_movies():
     """Retrieve all movies from the database."""
-    with engine.connect() as connection:
-        result = connection.execute(text("SELECT title, year, rating FROM movies"))
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT title, year, rating FROM movies"))
         movies = result.fetchall()
 
     return {row[0]: {"year": row[1], "rating": row[2]} for row in movies}
 
 def add_movie(title, year, rating):
     """Add a new movie to the database."""
-    with engine.connect() as connection:
+    with engine.connect() as conn:
         try:
-            connection.execute(text("INSERT INTO movies (title, year, rating) VALUES (:title, :year, :rating)"), 
-                               {"title": title, "year": year, "rating": rating})
-            connection.commit()
+            conn.execute(text("""
+                INSERT INTO movies (title, year, rating)
+                VALUES (:title, :year, :rating)
+            """), {"title": title, "year": year, "rating": rating})
+            conn.commit()
             print(f"Movie '{title}' added successfully.")
-        except Exception as e:
+        except SQLAlchemyError as e:
             print(f"Error: {e}")
 
 def delete_movie(title):
     """Delete a movie from the database."""
-    pass
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("DELETE FROM movies WHERE title = :title"),
+                             {"title": title})
+            conn.commit()
+            print(f"Movie '{title}' deleted successfully.")
+        except SQLAlchemyError as e:
+            print(f"Error: {e}")
 
 def update_movie(title, rating):
     """Update a movie's rating in the database."""
-    pass
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("UPDATE movies SET rating = :rating WHERE title = :title"),
+                               {"title": title, "rating": rating})
+            conn.commit()
+            print(f'Movie"{title}" updated successfully.')
+        except SQLAlchemyError as e:
+            print(f"Error: {e}")

@@ -1,2 +1,7 @@
 __pycache__
 .env
+movies.db
+.DS_Store
+.vscode
+.venv
+.idea
