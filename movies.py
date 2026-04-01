@@ -5,7 +5,8 @@ import requests
 import movie_storage_sql as storage
 from trm_colors import RED, GREEN, RESET
 
-def get_non_empty_input(prompt):
+
+def get_non_empty_input(prompt: str) -> str | None:
     """
     A common function for input fields that must not be left blank.
     If the user leaves it blank, it will warn them and ask again.
@@ -24,14 +25,14 @@ def get_non_empty_input(prompt):
         return value
 
 
-def command_list_movies(movies):
+def command_list_movies(movies: dict[str, dict[str, int | float]]) -> None:
     """Retrieve and display all movies from the database."""
-    print(f"{len(movies)} movies in total")
+    print(f"{RED}{len(movies)}{RESET} movies in total")
     for movie, data in movies.items():
         print(f"{movie} ({data['year']}): {data['rating']}")
-        
 
-def get_omdb_user_api_key():
+
+def get_omdb_user_api_key() -> str | None:
     """
     Get and validate API key from user.
     Returns the key if valid, or None if invalid or blank.
@@ -42,31 +43,30 @@ def get_omdb_user_api_key():
     print("\nTo use the movie search feature, you need an API key from OMDB.")
     print("You can get a free API key by registering at:\nhttps://www.omdbapi.com/apikey.aspx")
     print("\n" + "=" * 60 + "\n")
-    0
+
     api_key = input("Please enter your OMDB API key: ").strip()
     if not api_key:
         print(f"{RED}API key can't be left blank!{RESET}")
         return None
-        
     url = f"http://www.omdbapi.com/?apikey={api_key}&s=test"
     try:
         response = requests.get(url, timeout=10)
         data = response.json()
-        
+
         if data.get("Response") == "False":
             error_msg = data.get("Error", "Unknown error")
             print(f"{RED}Error: {error_msg}{RESET}")
             return None
-        
+
         print(f"{GREEN}API Key is valid.{RESET}")
         return api_key # Return the key if valid
-        
+
     except requests.exceptions.RequestException as e:
         print(f"{RED}Connection error: {e}{RESET}")
         return None
-    
 
-def get_omdb_movie_info(api_key, title):
+
+def get_omdb_movie_info(api_key: str, title: str) -> dict[str, str | int | float] | None:
     """
     Get movie information from OMDb API.
     """
@@ -74,20 +74,19 @@ def get_omdb_movie_info(api_key, title):
     try:
         response = requests.get(url, timeout=10)
         movie_data = response.json()
-        
+
         if movie_data.get("Response") == "False":
             error_msg = movie_data.get("Error", "Unknown error")
             print(f"{RED}Error: {error_msg}{RESET}")
             return None
-        
+
         return movie_data
     except requests.exceptions.RequestException as e:
         print(f"{RED}Connection error: {e}{RESET}")
         return None
 
 
-
-def command_add_movie(movies):
+def command_add_movie(movies: dict[str, dict[str, int | float]]) -> None:
     """
     Prompt the user to enter a movie title, fetch its info from OMDb API,
     and add it to the database.
@@ -105,30 +104,35 @@ def command_add_movie(movies):
             continue
 
         movie_data = get_omdb_movie_info(api_key, title)
-        
+
         poster = None
+        # If the movie is not found, ask if user wants to manually enter details.
         if not movie_data or movie_data.get("Response") == "False":
             if input("Would you like to manually enter the movie details? (y/n): ").lower() == "n":
                 continue
-            
+
             # Manual Input Fallback
             year_input = get_non_empty_input("Enter a year: ")
-            if year_input is None: 
+            if year_input is None:
                 return
             try:
                 year = int(year_input)
             except ValueError:
-                print("Invalid year."); 
+                print("Invalid year.")
                 continue
 
             rating_input = get_non_empty_input("Enter new movie rating (0-10): ")
-            if rating_input is None: 
+            if rating_input is None:
                 return
             try:
                 rating = float(rating_input)
             except ValueError:
-                print("Invalid rating."); 
+                print("Invalid rating.")
                 continue
+
+            poster = input("Enter movie poster URL (optional, press Enter to skip): ").strip()
+            if not poster:
+                poster = None
         else:
             # API Success - Use data from OMDb
             title = movie_data.get("Title", title)
@@ -141,11 +145,12 @@ def command_add_movie(movies):
             print(f"Movie found: {GREEN}{title}{RESET} ({year}) - Rating: {rating}")
 
         storage.add_movie(title, year, rating, poster)
+        # Update local dictionary so it shows up in "List movies" immediately
+        movies[title] = {"year": year, "rating": rating}
         return
 
 
-
-def command_delete_movie(movies):
+def command_delete_movie(movies: dict[str, dict[str, int | float]]) -> None:
     """
     Prompt the user to enter a movie title and then delete it from the database.
     If the movie doesn't exist, an error message will be displayed, and the menu will reappear.
@@ -166,11 +171,11 @@ def command_delete_movie(movies):
             continue
 
         storage.delete_movie(found_key)
-        enter_to_continue()
+        del movies[found_key] # Remove from local dictionary
         break
 
 
-def command_update_movie(movies):
+def command_update_movie(movies: dict[str, dict[str, int | float]]) -> None:
     """
     If the film exists, the user will be prompted to enter a new rating.
     The film's rating will then be updated in the database. Input validation is not required.
@@ -199,11 +204,11 @@ def command_update_movie(movies):
                 print(f"{RED}Enter a number between 0 and 10!{RESET}")
 
         storage.update_movie(found_key, edited_movie_rating)
-        print(f'Movie "{GREEN}{found_key}{RESET}" successfully updated.')
+        movies[found_key]["rating"] = edited_movie_rating # Update local dictionary
         break
 
 
-def print_movies_by_rating(movies):
+def print_movies_by_rating(movies: dict[str, dict[str, int | float]]) -> None:
     """
     It prints the names of films with a specific rating. title: "Best" or "Worst"
     """
@@ -235,7 +240,7 @@ def print_movies_by_rating(movies):
     return ratings, best_movies, worst_movies, sum_of_ratings
 
 
-def movie_statistics(movies):
+def movie_statistics(movies: dict[str, dict[str, int | float]]) -> None:
     """
     Output various statistics about the films in the database:
     - Average film rating
@@ -265,7 +270,7 @@ def movie_statistics(movies):
     print(f"Median rating: {GREEN}{round(median_rating, 1)}{RESET}")
 
 
-def random_movie_selection(movies):
+def random_movie_selection(movies: dict[str, dict[str, int | float]]) -> None:
     """
     Output a random movie from the database along with its rating.
     """
@@ -291,7 +296,7 @@ def movie_part_searching(movies):
         print(f"{RED}Movie not found{RESET}")
 
 
-def movies_sorted_by_rating(movies):
+def movies_sorted_by_rating(movies: dict[str, dict[str, int | float]]) -> None:
     """
     Display all films with their ratings in descending order.
     This means the highest-rated film is shown first and the lowest-rated film last.
@@ -312,7 +317,7 @@ def movies_sorted_by_rating(movies):
     return movies_by_rating
 
 
-def movies_sorted_by_year(movies):
+def movies_sorted_by_year(movies: dict[str, dict[str, int | float]]) -> None:
     """
     Movies are sorted from newest to oldest for “y” and from oldest to newest for “n”.
     """
@@ -341,7 +346,7 @@ def movies_sorted_by_year(movies):
             print(f"{movie} {GREEN}{year}{RESET}, {rating}")
 
 
-def menu_selection(movies):
+def menu_selection(movies: dict[str, dict[str, int | float]]) -> None:
     """
     Movie database menu selection
     """
@@ -363,7 +368,7 @@ def menu_selection(movies):
             print()
 
             if menu_choice == 0:
-                print("Bye!")
+                print("Bye!\n")
                 break
 
             if menu_choice not in actions:
@@ -377,7 +382,7 @@ def menu_selection(movies):
             print(f"{RED}Your selection must be an integer between 0-9!{RESET}")
 
 
-def start_menu():
+def start_menu() -> None:
     """
     Menu list that opens after each transaction
     """
@@ -400,7 +405,7 @@ def start_menu():
     print()
 
 
-def enter_to_continue():
+def enter_to_continue() -> None:
     """
     User's transaction progress check
     """
@@ -413,7 +418,7 @@ def enter_to_continue():
             break
 
 
-def main():
+def main() -> None:
     """Main function to run the movie database application."""
     start_menu() # Menu list
     movies = storage.list_movies()
