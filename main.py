@@ -23,9 +23,11 @@ def main():
         while True:
             should_switch_user = menu_selection(movies, username)
 
-            if not should_switch_user:
-                print("\nShutting down. Enjoy your movies! 🎥🍿\n")
-                return
+            if should_switch_user:
+                break  # Go back to Step 1 (Profile Selection)
+
+            print("\nShutting down. Enjoy your movies! 🎥🍿\n")
+            return
 
 
 if __name__ == "__main__":

@@ -1,86 +1,70 @@
-# Movie Database Manager - Multi-User, SQL & OMDb API
+# 🎬 Multi-User Movie Database App
 
-[![Python Version](https://img.shields.io/badge/python-3.x-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Pylint Score](https://img.shields.io/badge/pylint-9.56%2F10-brightgreen.svg)](https://www.pylint.org/)
-[![Database: SQLite](https://img.shields.io/badge/database-SQLite-lightgrey.svg)](https://sqlite.org/index.html)
+A professional Command-Line Interface (CLI) application and a stylish Web Gallery for managing personal movie collections. This project supports multiple user profiles, automatic movie metadata fetching from the OMDb API, and detailed statistical analysis.
 
-A professional, full-featured **Movie Database Application** that supports multiple user profiles. Each user manages their own private library with deep data enrichment via the **OMDb API**, persistent storage through **SQLAlchemy (SQLite)**, and individual web gallery generation.
+## 🚀 Features
 
----
+### 👤 Multi-User Support
+- **Profile Management**: Create, select, and switch between different user profiles.
+- **Private Collections**: Each user maintains their own independent movie list.
+- **Profile Deletion**: Easily remove outdated profiles and their associated data from the initial user menu.
 
-## 🚀 Key Features
+### 🔍 Smart Movie Management
+- **OMDb Integration**: Automatically fetch movie details (Year, Rating, Poster, Country, etc.) by just entering the title.
+- **Manual Entry**: Option to manually add movies if they aren't found in the database.
+- **Personal Notes**: Add and update custom notes for each movie.
+- **Partial Title Deletion**: Search for movies to delete using partial names.
 
-- 👥 **Multi-User Profiles**: Create and switch between private movie collections with separate data contexts.
-- 💾 **Reliable SQL Persistence**: Efficient storage management using SQLAlchemy and SQLite with auto-migration.
-- 🌐 **OMDb API Integration**: Fetch rich metadata (Director, Actors, Genre, Plot) and posters automatically.
-- 🎨 **Enhanced CLI Experience**: Vibrant, color-coded terminal interface with intuitive navigation and login screens.
-- 🔍 **Interactive Info View**: Generate individual IMDb-style detail pages for each movie.
-- 📉 **Comprehensive Statistics**: Real-time analysis of ratings (Average, Best, Worst).
-- 💻 **Static Site Generation**: Professional HTML gallery generator to showcase your entire collection online.
+### 📊 Advanced Statistics
+Comprehensive analysis of your collection:
+- **Average Rating**: Calculated across your entire library.
+- **Median Rating**: Understand the center of your rating distribution.
+- **Best & Worst List**: Identifies and lists all movies sharing the highest and lowest ratings.
 
----
+### 🌐 Dynamic Web Gallery
+Generate a stunning, responsive HTML website to showcase your collection:
+- **Interactive Posters**: Hover over posters to see your personal notes.
+- **IMDb Integration**: Click on posters to jump directly to the movie's IMDb page.
+- **Detail Pages**: Automatically generated individual pages for every movie with full metadata.
+- **Accessibility**: Includes country flags and organized layouts.
 
-## 📁 Project Structure
+## 🖼️ Application Preview
 
-```text
-.
-├── main.py                    # Application Entry Point
-├── users.py                   # User Profile Management & Login Utility
-├── movies.py                  # Core Logic, CLI Menus & Web Generation
-├── trm_colors.py              # Visual UI Styling Utilities
-├── data/
-│   └── movies.db              # SQLite Database (Auto-created if missing)
-├── storage/
-│   ├── __init__.py            # Package Initializer
-│   └── movie_storage_sql.py   # Data Access Layer (SQLAlchemy Persistence)
-├── _static/
-│   ├── index_template.html    # Base Layout Template
-│   ├── style.css              # Custom Gallery CSS (Responsive Design)
-│   ├── no_poster.jpg          # Fallback Asset
-│   └── details/               # Individual Movie Detail Pages (Auto-generated)
-├── README.md                  # Comprehensive Documentation
-├── requirements.txt           # Dependency Manifest
-└── .gitignore                 # VCS Exclusions
-```
+### User Selection (Login)
+![User Selection Screen](_static/img/login_screen.png)
 
----
+### Main Application Menu
+![Main Application Menu](_static/img/movie_menu.png)
+
+### Generated Web Gallery
+![Generated Web Gallery](_static/img/web_gallery.png)
+
+## 🛠️ Technical Stack
+- **Backend**: Python 3
+- **Database**: SQLite3 with SQLAlchemy
+- **API**: OMDb API (Open Movie Database)
+- **Frontend**: HTML5, Vanilla CSS3 (Responsive Design)
 
 ## ⚙️ Setup & Installation
 
-### 1. Prerequisites
-- **Python 3.10+**
-- Active **OMDb API Key** (Get it free at [omdbapi.com](https://www.omdbapi.com/apikey.aspx))
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd Movie_Project-SQL_HTML_and_API
+   ```
 
-### 2. Installation & Run
-Clone the repository and install dependencies:
+2. **Install dependencies**:
+   ```bash
+   pip install requests sqlalchemy
+   ```
 
-```bash
-git clone <repository-url>
-cd Movie_Project-SQL_HTML_and_API
-pip install -r requirements.txt
-python3 main.py
-```
+3. **Get an API Key**:
+   Register for a free API key at [omdbapi.com](https://www.omdbapi.com/apikey.aspx). The app will prompt you for this key the first time you add a movie.
 
----
-
-## 🛠️ Usage
-
-1. **Profile Selection**: Launch the app and select an existing user or create a new one.
-2. **Management Options**: Add movies by title (fetched from OMDb), add personal notes, or browse stats.
-3. **Web Generation**: Choice **"7"** generates a full web gallery (including detail pages) and opens it in your browser.
-4. **Switch User**: Choice **"8"** allows you to switch profiles without restarting.
-
----
-
-## 📦 Core Technologies
-
-- **SQLAlchemy**: Robust database abstraction layer.
-- **Requests**: High-performance API communication with timeout handling.
-- **SQLite**: Local, lightweight data persistence.
-- **OS/JSON**: Dynamic file management and metadata serialization.
-
----
+4. **Run the application**:
+   ```bash
+   python main.py
+   ```
 
 ## 📝 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project was developed as part of the Masterschool curriculum.

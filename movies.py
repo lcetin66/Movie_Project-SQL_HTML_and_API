@@ -112,7 +112,7 @@ def command_add_movie(movies: dict[str, dict]) -> None:
         if not movie_data or movie_data.get("Response") == "False":
             print(f"{RED}Error: Movie not found on OMDB!{RESET}")
             if input("Enter manually? (y/n): ").lower() != "y":
-                continue
+                return
 
             y_in = get_non_empty_input("Enter year: ")
             if y_in is None:
@@ -152,17 +152,47 @@ def command_add_movie(movies: dict[str, dict]) -> None:
 
 
 def command_delete_movie(movies: dict[str, dict]) -> None:
-    """Removes a movie from the user's list."""
-    title = get_non_empty_input("\nEnter movie name to delete: ")
-    if title is None:
-        return
+    """
+    Prompt the user to enter a movie title and then delete it from the database.
+    Supports partial matching and asks for confirmation.
+    """
+    while True:
+        del_movie_name = get_non_empty_input("\nEnter movie name to delete (or 0 to cancel): ")
+        if del_movie_name is None or del_movie_name == '0':
+            return
 
-    if title in movies:
-        movie_storage.delete_movie(title)
-        del movies[title]
-        print(f"Movie '{title}' deleted.")
-    else:
-        print(f"{RED}Movie '{title}' not found!{RESET}")
+        # Find all movies that contain the input string (case-insensitive)
+        matches = [movie for movie in movies if del_movie_name.lower() in movie.lower()]
+
+        if not matches:
+            print(f'{RED}No movie found matching "{del_movie_name}"{RESET}')
+            continue
+
+        # If multiple movies found, list them and ask to be more specific
+        if len(matches) > 1:
+            print(f"\n{GREEN}Multiple movies found matching '{del_movie_name}':{RESET}")
+            for movie in matches:
+                info = movies[movie]
+                print(f"  - {movie} ({info['year']})")
+            print(f"\n{RED}Please enter the more specific movie name from the list above.{RESET}\n")
+            continue
+
+        # Exactly one match found
+        found_key = matches[0]
+        info = movies[found_key]
+
+        while True:
+            confirm = input(f"Are you sure you want to delete '{RED}{found_key}{RESET}' ({info['year']})? (y/n): ").lower()
+            if confirm == 'n':
+                print("Deletion cancelled.")
+                return
+            if confirm == 'y':
+                break
+            print("Please enter 'y' or 'n'.")
+
+        movie_storage.delete_movie(found_key)
+        del movies[found_key]  # Remove from local dictionary
+        break
 
 
 def command_update_movie(movies: dict[str, dict]) -> None:
@@ -182,24 +212,63 @@ def command_update_movie(movies: dict[str, dict]) -> None:
         print(f"{RED}Movie '{title}' not found!{RESET}")
 
 
+def print_movies_by_rating(movies: dict[str, dict]) -> tuple[list[float], list[str], list[str], float]:
+    """
+    It prints the names of films with a specific rating (Best and Worst).
+    Returns (ratings, best_movies, worst_movies, sum_of_ratings).
+    """
+    ratings = [info["rating"] for info in movies.values()]
+    best_rating = max(ratings)
+    worst_rating = min(ratings)
+    sum_of_ratings = sum(ratings)
+
+    best_movies = []
+    worst_movies = []
+    for title, info in movies.items():
+        if info["rating"] == best_rating:
+            best_movies.append(title)
+        if info["rating"] == worst_rating:
+            worst_movies.append(title)
+
+    print(f'\nBest movies ({GREEN}{best_rating}{RESET}):')
+    for movie in best_movies:
+        print(f"- {movie}")
+
+    print(f'\nWorst movies ({RED}{worst_rating}{RESET}):')
+    for movie in worst_movies:
+        print(f"- {movie}")
+
+    return ratings, best_movies, worst_movies, sum_of_ratings
+
+
 def command_movie_stats(movies: dict[str, dict]) -> None:
-    """Calculates basic statistics for the movie ratings."""
+    """
+    Output various statistics about the films in the database:
+    - Average film rating
+    - Median rating
+    - Best movies
+    - Worst movies
+    """
     if not movies:
-        print(f"{RED}No movies for stats!{RESET}")
+        print(f"{RED}No movies found to calculate statistics.{RESET}")
         return
 
-    ratings = [m["rating"] for m in movies.values() if m.get("rating")]
-    if not ratings:
-        print(f"{RED}No rating data available.{RESET}")
-        return
+    ratings, _, _, total_rating = print_movies_by_rating(movies)
 
-    print("\nStats:")
-    print(f"- Average rating: {mean(ratings):.1f}")
+    # average
+    average_rating = round(total_rating / len(movies), 1)
+    print(f"\nAverage rating: {GREEN}{average_rating}{RESET}")
 
-    # Sort for best/worst
-    sorted_movies = sorted(movies.items(), key=lambda x: x[1]["rating"])
-    print(f"- Best movie: {sorted_movies[-1][0]} ({sorted_movies[-1][1]['rating']})")
-    print(f"- Worst movie: {sorted_movies[0][0]} ({sorted_movies[0][1]['rating']})")
+    # median
+    sorted_ratings = sorted(ratings)
+    length = len(sorted_ratings)
+
+    if length % 2 == 1:
+        median_rating = sorted_ratings[length // 2]
+    else:
+        median_rating = (sorted_ratings[length // 2 - 1] + sorted_ratings[length // 2]) / 2
+
+    print(f"Median rating: {GREEN}{round(median_rating, 1)}{RESET}")
 
 
 def command_random_movie(movies: dict[str, dict]) -> None:
@@ -254,8 +323,7 @@ def command_generate_website(movies: dict[str, dict], username: str = "index") -
     movie_grid_html = ""
     for title, info in movies.items():
         imdb_id = info.get("imdb_id", "tt0000000")
-        poster_url = (info.get("poster") or
-                      "https://via.placeholder.com/200x300?text=No+Poster")
+        poster_url = (info.get("poster") or "img/no_poster.jpg")
         note = info.get("note") or ""
         year = info.get("year", "Unknown")
         countries = info.get("countries")
