@@ -1,10 +1,12 @@
-"""My Film Data Bank"""
+"""
+My Film Data Bank
+"""
 
 import random
-import requests
 import os
 import webbrowser
-import movie_storage_sql as storage
+import requests
+from storage import movie_storage_sql as storage
 from trm_colors import RED, GREEN, RESET
 
 
@@ -39,6 +41,13 @@ def get_omdb_user_api_key() -> str | None:
     Get and validate API key from user.
     Returns the key if valid, or None if invalid or blank.
     """
+    # Check if API key is already saved
+    if os.path.exists("api_key.txt"):
+        with open("api_key.txt", "r", encoding="utf-8") as fileobject:
+            api_key = fileobject.read().strip()
+        print(f"{GREEN}Using saved API Key: {api_key}{RESET}")
+        return api_key
+
     print("\n" + "=" * 60)
     print("OMDB API Key Registration")
     print("=" * 60)
@@ -50,6 +59,7 @@ def get_omdb_user_api_key() -> str | None:
     if not api_key:
         print(f"{RED}API key can't be left blank!{RESET}")
         return None
+
     url = f"http://www.omdbapi.com/?apikey={api_key}&s=test"
     try:
         response = requests.get(url, timeout=10)
@@ -61,7 +71,10 @@ def get_omdb_user_api_key() -> str | None:
             return None
 
         print(f"{GREEN}API Key is valid.{RESET}")
-        return api_key # Return the key if valid
+        # Save the API key to a file
+        with open("api_key.txt", "w", encoding="utf-8") as fileobject:
+            fileobject.write(api_key)
+        return api_key
 
     except requests.exceptions.RequestException as e:
         print(f"{RED}Connection error: {e}{RESET}")
@@ -347,7 +360,8 @@ def movies_sorted_by_year(movies: dict[str, dict[str, int | float]]) -> None:
             rating = movies[movie]["rating"]
             print(f"{movie} {GREEN}{year}{RESET}, {rating}")
 
-def command_generate_website (movies: dict[str, dict[str, int | float]]) -> None:
+
+def command_generate_website(movies: dict[str, dict[str, int | float]]) -> None:
     """
     Generate a website with the movie database.
     """
@@ -359,8 +373,8 @@ def command_generate_website (movies: dict[str, dict[str, int | float]]) -> None
         if poster:
             poster_html = f'<img class="movie-poster" src="{poster}" alt="{movie}">'
         else:
-            poster_html = '<img class="movie-poster" src="_static/no_poster.jpg" alt="No Poster">'
-        
+            poster_html = '<img class="movie-poster" src="no_poster.jpg" alt="No Poster">'
+
         movie_grid += f"""
         <li>
             <div class="movie">
@@ -370,7 +384,11 @@ def command_generate_website (movies: dict[str, dict[str, int | float]]) -> None
             </div>
         </li>
         """
-    website_content = website_content.replace("__TEMPLATE_TITLE__", "My Movies Database").replace("__TEMPLATE_MOVIE_GRID__", movie_grid)
+    website_content = website_content.replace(
+        "__TEMPLATE_TITLE__", "My Movies Database"
+    ).replace(
+        "__TEMPLATE_MOVIE_GRID__", movie_grid
+    )
     with open("_static/index.html", "w", encoding="utf-8") as fileobject:
         fileobject.write(website_content)
     file_path = os.path.abspath("_static/index.html")
@@ -449,14 +467,3 @@ def enter_to_continue() -> None:
             print()
             start_menu()
             break
-
-
-def main() -> None:
-    """Main function to run the movie database application."""
-    start_menu() # Menu list
-    movies = storage.list_movies()
-    menu_selection(movies) # Menu choice
-
-
-if __name__ == "__main__":
-    main()

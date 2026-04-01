@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from trm_colors import RED, GREEN, RESET
 
 # Define the database URL
-DB_URL = "sqlite:///movies.db"
+DB_URL = "sqlite:///data/movies.db"
 
 # Create the engine
 engine = create_engine(DB_URL, echo=False)

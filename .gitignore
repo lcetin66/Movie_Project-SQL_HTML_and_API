@@ -1,7 +1,8 @@
 __pycache__
 .env
-movies.db
 .DS_Store
 .vscode
 .venv
 .idea
+api_key.txt
+tempCodeRunnerFile.py
