@@ -1,22 +1,23 @@
-# Movie Project - SQL, HTML and API
+# Movie Database Manager - SQL, HTML and API
 
 [![Python Version](https://img.shields.io/badge/python-3.x-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Pylint Score](https://img.shields.io/badge/pylint-10.0%2F10-brightgreen.svg)](https://www.pylint.org/)
 [![Database: SQLite](https://img.shields.io/badge/database-SQLite-lightgrey.svg)](https://sqlite.org/index.html)
 
-This project is a comprehensive **Movie Database Application** that enables users to manage their personal movie collections efficiently. It integrates the **OMDb API** to fetch dynamic movie details and utilizes **SQLAlchemy** for local data persistence in an **SQLite** database.
+A professional, full-featured **Movie Database Application** that allows users to manage their movie libraries with ease. This tool integrates the **OMDb API** for rich data enrichment and utilizes **SQLAlchemy** with **SQLite** for robust, cross-platform data persistence.
 
 ---
 
-## 🚀 Features
+## 🚀 Key Features
 
-- 💾 **Robust Persistence**: Seamlessly manage your movie collection in a local SQL database.
-- 🌐 **Real-time Data Fetching**: Automatically retrieve titles, years, ratings, and posters via the OMDb API.
-- 🎨 **Enhanced CLI**: Interactive, color-coded command-line interface for an intuitive user experience.
-- 📊 **Insightful Statistics**: Detailed analysis of your collection, including average ratings, medians, and top performers.
-- 🔍 **Advanced Search & Sort**: Quickly find movies or organize your list by release year and IMDb rating.
-- 💻 **Static Site Generator**: Create a professional, responsive HTML gallery to showcase your collection.
+- 💾 **Reliable SQL Persistence**: Efficient storage management using SQLAlchemy and SQLite.
+- 🌐 **OMDb API Integration**: Fetch movie titles, years, ratings, and posters automatically with optimized request handling.
+- 🎨 **Enhanced CLI Experience**: Vibrant, color-coded terminal interface with intuitive navigation.
+- 🎯 **Smart Deletion**: Partial title matching search with a confirmation mechanism to prevent accidental data loss.
+- 📉 **Rich Statistics**: Comprehensive analysis of movie collection (average, median, top-rated).
+- 🔍 **Flexible Searching**: Find movies using even just one or two letters, with dynamic listing of matches.
+- 💻 **Static Site Generation**: Professional HTML gallery generator to showcase your collection in a responsive web view.
 
 ---
 
@@ -25,67 +26,66 @@ This project is a comprehensive **Movie Database Application** that enables user
 ```text
 .
 ├── main.py                    # Application Entry Point
-├── movies.py                  # Core Logic & Command Handling
-├── trm_colors.py              # Terminal UI Styling Utilities
+├── movies.py                  # Core Logic, Business Rules & Command Handling
+├── trm_colors.py              # Visual UI Styling Utilities
 ├── data/
-│   └── movies.db              # Persistent SQLite Storage
+│   └── movies.db              # SQLite Database (Auto-created if missing)
 ├── storage/
-│   ├── __init__.py            # Package Initializer and global configuration
-│   └── movie_storage_sql.py   # Database Access Layer (SQLAlchemy / SQLite)
+│   ├── __init__.py            # Package Initializer
+│   └── movie_storage_sql.py   # Data Access Layer (SQLAlchemy Logic)
 ├── _static/
-│   ├── index_template.html    # Base HTML layout template
-│   ├── index.html             # Generated website output
-│   ├── style.css              # Custom styling for the gallery
-│   └── no_poster.jpg          # Fallback image resource
-├── README.md                  # Project Documentation
+│   ├── index_template.html    # Base Layout Template
+│   ├── index.html             # Generated Web View
+│   ├── style.css              # Custom Gallery CSS
+│   └── no_poster.jpg          # Fallback Asset
+├── README.md                  # Professional Documentation
 ├── requirements.txt           # Dependency Manifest
-└── .gitignore                 # Version Control Exclusions
+└── .gitignore                 # VCS Exclusions
 ```
 
 ---
 
-## ⚙️ Setup Instructions
+## ⚙️ Setup & Installation
 
 ### 1. Prerequisite
-Ensure you have **Python 3.x** installed on your system.
+- **Python 3.10+** installed.
+- An internet connection for API requests.
 
 ### 2. Installation
-Clone the repository and install the required dependencies:
+Clone the repository and install the dependencies:
 
 ```bash
 git clone <repository-url>
-cd 20260330-Movie_Project-SQL_HTML_and_API
+cd Movie_Project-SQL_HTML_and_API
 pip install -r requirements.txt
 ```
 
 ### 3. API Configuration
-You will need a free API key from OMDb. You can obtain one by registering at [omdbapi.com](https://www.omdbapi.com/apikey.aspx).
+Get a free API key at [omdbapi.com](https://www.omdbapi.com/apikey.aspx). The app will prompt you for it on first run and save it locally.
 
 ---
 
 ## 🛠️ Usage
 
-Execute the application with the following command:
+Simply run the main script from the root directory:
 
 ```bash
-python main.py
+python3 main.py
 ```
 
-### Navigating the App:
-- **Add Movie**: Enter a title; the app fetches details automatically.
-- **Search**: Find movies by any part of their title.
-- **Stats**: View a quick summary of your ratings.
-- **Generate Website**: Export your collection to a beautiful web view (check `_static/index.html`).
+### Advanced Functionality:
+- **Smart Delete**: Type a few letters of a movie name. The app will list all matches. If exactly one is found, it asks for your final confirmation.
+- **Auto-Web Export**: Option 9 generates a complete HTML gallery in the `_static/` folder.
+- **Fail-safe Entry**: If a movie isn't found on OMDb, the app gracefully switches to manual input mode.
 
 ---
 
 ## 📦 Dependencies
 
-The application relies on the following Python modules:
-- `requests`: For API communication.
-- `sqlalchemy`: For database abstraction and ORM/Core functionality.
+- `requests`: Optimized API communication with dedicated timeouts.
+- `sqlalchemy`: Powerful database abstraction for SQLite.
 
 ---
 
 ## 📝 License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

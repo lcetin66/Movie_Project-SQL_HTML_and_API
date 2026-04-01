@@ -3,28 +3,38 @@ This module provides SQL-based storage functionality for the movie project.
 It handles database connection, table creation, and CRUD operations for movies using SQLAlchemy.
 """
 
+import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from trm_colors import RED, GREEN, RESET
 
-# Database configuration
-DB_URL = "sqlite:///data/movies.db"
+# Configure the database path dynamically
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_PATH = os.path.join(DATA_DIR, "movies.db")
+DB_URL = f"sqlite:///{DB_PATH}"
 
 # Create the engine
 engine = create_engine(DB_URL, echo=False)
 
-# Create the movies table if it does not exist
-with engine.connect() as connection:
-    connection.execute(text("""
-        CREATE TABLE IF NOT EXISTS movies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT UNIQUE NOT NULL,
-            year INTEGER NOT NULL,
-            rating REAL NOT NULL,
-            poster TEXT
-        )
-    """))
-    connection.commit()
+# Create the tables if they do not exist
+try:
+    with engine.connect() as connection:
+        # Create movies table
+        connection.execute(text("""
+            CREATE TABLE IF NOT EXISTS movies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT UNIQUE NOT NULL,
+                year INTEGER NOT NULL,
+                rating REAL NOT NULL,
+                poster TEXT
+            )
+        """))
+        connection.commit()
+except SQLAlchemyError as e:
+    print(f"{RED}Database Initialization Error: {e}{RESET}")
 
 
 def list_movies():

@@ -60,9 +60,12 @@ def get_omdb_user_api_key() -> str | None:
         print(f"{RED}API key can't be left blank!{RESET}")
         return None
 
-    url = f"http://www.omdbapi.com/?apikey={api_key}&s=test"
+    params = {
+        "apikey": api_key,
+        "s": "test"
+    }
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get("http://www.omdbapi.com/", params=params, timeout=5)
         data = response.json()
 
         if data.get("Response") == "False":
@@ -85,14 +88,15 @@ def get_omdb_movie_info(api_key: str, title: str) -> dict[str, str | int | float
     """
     Get movie information from OMDb API.
     """
-    url = f"http://www.omdbapi.com/?apikey={api_key}&t={title}"
+    params = {
+        "apikey": api_key,
+        "t": title.strip()
+    }
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get("http://www.omdbapi.com/", params=params, timeout=5)
         movie_data = response.json()
 
         if movie_data.get("Response") == "False":
-            error_msg = movie_data.get("Error", "Unknown error")
-            print(f"{RED}Error: {error_msg}{RESET}")
             return None
 
         return movie_data
@@ -113,7 +117,7 @@ def command_add_movie(movies: dict[str, dict[str, int | float]]) -> None:
     while True:
         title = get_non_empty_input("Enter new movie name: ")
         if title is None:
-            return
+            continue
         if any(movie.lower() == title.lower() for movie in movies):
             print(f'Movie "{RED}{title}{RESET}" already exists!')
             continue
@@ -121,15 +125,16 @@ def command_add_movie(movies: dict[str, dict[str, int | float]]) -> None:
         movie_data = get_omdb_movie_info(api_key, title)
 
         poster = None
-        # If the movie is not found, ask if user wants to manually enter details.
+        # If the movie is not found, notify user and ask if they want to manually enter details.
         if not movie_data or movie_data.get("Response") == "False":
-            if input("Would you like to manually enter the movie details? (y/n): ").lower() == "n":
+            print(f"{RED}The movie '{title}' does not exist on OMDb.{RESET}")
+            if input("Would you like to manually enter the movie details? (y/n): ").lower() != "y":
                 continue
 
             # Manual Input Fallback
             year_input = get_non_empty_input("Enter a year: ")
             if year_input is None:
-                return
+                return # Back to menu if user entered 0
             try:
                 year = int(year_input)
             except ValueError:
@@ -138,7 +143,7 @@ def command_add_movie(movies: dict[str, dict[str, int | float]]) -> None:
 
             rating_input = get_non_empty_input("Enter new movie rating (0-10): ")
             if rating_input is None:
-                return
+                return # Back to menu if user entered 0
             try:
                 rating = float(rating_input)
             except ValueError:
@@ -155,8 +160,18 @@ def command_add_movie(movies: dict[str, dict[str, int | float]]) -> None:
             year_str = movie_data.get("Year", "0")
             year_digits = ''.join(filter(str.isdigit, year_str))
             year = int(year_digits[:4]) if year_digits else 0
-            rating = float(movie_data.get("imdbRating", "0"))
+            
+            # Robust imdbRating parsing
+            rating_str = movie_data.get("imdbRating", "0")
+            try:
+                rating = float(rating_str)
+            except ValueError:
+                rating = 0.0
+                
             poster = movie_data.get("Poster", "")
+            if poster == "N/A":
+                poster = None
+                
             print(f"Movie found: {GREEN}{title}{RESET} ({year}) - Rating: {rating}")
 
         storage.add_movie(title, year, rating, poster)
@@ -168,25 +183,44 @@ def command_add_movie(movies: dict[str, dict[str, int | float]]) -> None:
 def command_delete_movie(movies: dict[str, dict[str, int | float]]) -> None:
     """
     Prompt the user to enter a movie title and then delete it from the database.
-    If the movie doesn't exist, an error message will be displayed, and the menu will reappear.
+    Supports partial matching and asks for confirmation.
     """
     while True:
-        del_movie_name = get_non_empty_input("Enter movie name to delete: ")
+        del_movie_name = get_non_empty_input("Enter movie name to delete (or 0 to cancel): ")
         if del_movie_name is None:
-            break
+            return
 
-        found_key = None
-        for movie in movies:
-            if movie.lower() == del_movie_name.lower():
-                found_key = movie
-                break
+        # Find all movies that contain the input string (case-insensitive)
+        matches = [movie for movie in movies if del_movie_name.lower() in movie.lower()]
 
-        if found_key is None:
-            print(f'Movie "{RED}{del_movie_name}{RESET}" does not exist!')
+        if not matches:
+            print(f'{RED}No movie found matching "{del_movie_name}"{RESET}')
             continue
 
+        # If multiple movies found, list them and ask to be more specific
+        if len(matches) > 1:
+            print(f"\n{GREEN}Multiple movies found matching '{del_movie_name}':{RESET}")
+            for movie in matches:
+                info = movies[movie]
+                print(f"  - {movie} ({info['year']})")
+            print(f"\n{RED}Please enter the more specific movie name from the list above.{RESET}\n")
+            continue
+
+        # Exactly one match found
+        found_key = matches[0]
+        info = movies[found_key]
+        
+        while True:
+            confirm = input(f"Are you sure you want to delete '{RED}{found_key}{RESET}' ({info['year']})? (y/n): ").lower()
+            if confirm == 'n':
+                print("Deletion cancelled.")
+                return
+            if confirm == 'y':
+                break
+            print("Please enter 'y' or 'n'.")
+
         storage.delete_movie(found_key)
-        del movies[found_key] # Remove from local dictionary
+        del movies[found_key]  # Remove from local dictionary
         break
 
 
@@ -417,20 +451,20 @@ def menu_selection(movies: dict[str, dict[str, int | float]]) -> None:
         try:
             menu_choice = int(input("Enter choice (0-9): "))
             print()
-
-            if menu_choice == 0:
-                print("Bye!\n")
-                break
-
-            if menu_choice not in actions:
-                print(f"Your selection must be an integer between {RED}0-9!{RESET}")
-                continue
-
-            actions[menu_choice]()
-            enter_to_continue()
-
         except ValueError:
             print(f"{RED}Your selection must be an integer between 0-9!{RESET}")
+            continue
+
+        if menu_choice == 0:
+            print("Bye!\n")
+            break
+
+        if menu_choice not in actions:
+            print(f"Your selection must be an integer between {RED}0-9!{RESET}")
+            continue
+
+        actions[menu_choice]()
+        enter_to_continue()
 
 
 def start_menu() -> None:
