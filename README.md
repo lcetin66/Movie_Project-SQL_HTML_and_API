@@ -30,12 +30,13 @@ This project is a comprehensive **Movie Database Application** that enables user
 ├── data/
 │   └── movies.db              # Persistent SQLite Storage
 ├── storage/
-│   ├── __init__.py            # Package Initializer
-│   └── movie_storage_sql.py    # Database Access Layer (SQLAlchemy)
+│   ├── __init__.py            # Package Initializer and global configuration
+│   └── movie_storage_sql.py   # Database Access Layer (SQLAlchemy / SQLite)
 ├── _static/
-│   ├── index_template.html    # Base HTML Template
-│   ├── style.css              # Custom Styling for Generated Site
-│   └── no_poster.jpg          # Fallback Image Resource
+│   ├── index_template.html    # Base HTML layout template
+│   ├── index.html             # Generated website output
+│   ├── style.css              # Custom styling for the gallery
+│   └── no_poster.jpg          # Fallback image resource
 ├── README.md                  # Project Documentation
 ├── requirements.txt           # Dependency Manifest
 └── .gitignore                 # Version Control Exclusions
