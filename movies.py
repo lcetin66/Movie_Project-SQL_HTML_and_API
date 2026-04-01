@@ -3,6 +3,7 @@
 import random
 import requests
 import os
+import webbrowser
 import movie_storage_sql as storage
 from trm_colors import RED, GREEN, RESET
 
@@ -375,6 +376,7 @@ def command_generate_website (movies: dict[str, dict[str, int | float]]) -> None
     file_path = os.path.abspath("_static/index.html")
     print(f"{GREEN}Website generated successfully.{RESET}\n")
     print(f"You can view the website at: file://{file_path}")
+    webbrowser.open(f"file://{file_path}")
 
 
 def menu_selection(movies: dict[str, dict[str, int | float]]) -> None:
