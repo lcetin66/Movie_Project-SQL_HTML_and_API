@@ -10,7 +10,7 @@ from statistics import mean
 import random
 import requests
 import storage.movie_storage_sql as movie_storage
-from trm_colors import RED, GREEN, RESET
+from trm_colors import RED, GREEN, YELLOW, CYAN, RESET
 
 
 def get_non_empty_input(msg: str) -> str:
@@ -29,6 +29,54 @@ def get_non_empty_input(msg: str) -> str:
             return None
 
 
+def get_omdb_user_api_key() -> str | None:
+    """
+    Get and validate API key from user.
+    Returns the key if valid, or None if invalid or blank.
+    """
+    # Check if API key is already saved
+    if os.path.exists("api_key.txt"):
+        with open("api_key.txt", "r", encoding="utf-8") as fileobject:
+            api_key = fileobject.read().strip()
+        print(f"{GREEN}Using saved API Key: {api_key}{RESET}")
+        return api_key
+
+    print("\n" + "=" * 60)
+    print("OMDB API Key Registration")
+    print("=" * 60)
+    print("\nTo use the movie search feature, you need an API key from OMDB.")
+    print("You can get a free API key by registering at:\nhttps://www.omdbapi.com/apikey.aspx")
+    print("\n" + "=" * 60 + "\n")
+
+    api_key = input("Please enter your OMDB API key: ").strip()
+    if not api_key:
+        print(f"{RED}API key can't be left blank!{RESET}")
+        return None
+
+    params = {
+        "apikey": api_key,
+        "s": "test"
+    }
+    try:
+        response = requests.get("http://www.omdbapi.com/", params=params, timeout=5)
+        data = response.json()
+
+        if data.get("Response") == "False":
+            error_msg = data.get("Error", "Unknown error")
+            print(f"{RED}Error: {error_msg}{RESET}")
+            return None
+
+        print(f"{GREEN}API Key is valid.{RESET}")
+        # Save the API key to a file
+        with open("api_key.txt", "w", encoding="utf-8") as fileobject:
+            fileobject.write(api_key)
+        return api_key
+
+    except requests.exceptions.RequestException as e:
+        print(f"{RED}Connection error: {e}{RESET}")
+        return None
+
+
 def command_list_movies(movies: dict[str, dict]) -> None:
     """Prints all movies for the current user."""
     if not movies:
@@ -43,13 +91,9 @@ def command_list_movies(movies: dict[str, dict]) -> None:
 
 def command_add_movie(movies: dict[str, dict]) -> None:
     """Fetches movie from OMDB and adds it to the user's storage."""
-    api_key_path = "api_key.txt"
-    if not os.path.exists(api_key_path):
-        print(f"{RED}No API key found in api_key.txt!{RESET}")
+    api_key = get_omdb_user_api_key()
+    if not api_key:
         return
-
-    with open(api_key_path, "r", encoding="utf-8") as f:
-        api_key = f.read().strip()
 
     while True:
         title = get_non_empty_input("\nEnter movie name: ")

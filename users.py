@@ -25,6 +25,33 @@ def prompt_create_profile():
         return None
 
 
+def prompt_delete_user(profiles):
+    """
+    Shows list of users and handles deletion logic.
+    """
+    if not profiles:
+        print(f"{RED}No profiles available to delete.{RESET}")
+        return
+
+    print("\nSelect profile to " + RED + "DELETE" + RESET + ":")
+    for idx, name in enumerate(profiles, 1):
+        print(f"{idx}. {name}")
+    print("0. Cancel")
+
+    choice = input("\nEnter number to delete: ").strip()
+
+    if choice.isdigit() and 1 <= int(choice) <= len(profiles):
+        selected_name = profiles[int(choice) - 1]
+        confirm = input(f"Are you SURE you want to delete\n{RED}{selected_name}{RESET} and ALL their movies? (y/n): ").lower().strip()
+        if confirm == 'y':
+            if movie_storage.delete_user_profile(selected_name):
+                print(f"User {RED}{selected_name}{RESET} deleted successfully.")
+            else:
+                print(f"{RED}Failed to delete user.{RESET}")
+    elif choice != "0":
+        print(f"{RED}Invalid selection.{RESET}")
+
+
 def user_selection_screen():
     """
     Shows available user accounts and asks user to select or create one.
@@ -43,6 +70,7 @@ def user_selection_screen():
             print(f"{idx}. {name}")
 
         print(f"{len(profiles) + 1}. Create new profile")
+        print(f"{len(profiles) + 2}. {RED}Delete profile{RESET}")
         print("0. Exit Application")
 
         choice = input("\nEnter choice: ").strip()
@@ -64,5 +92,10 @@ def user_selection_screen():
             if new_name:
                 movie_storage.set_current_user(new_name)
                 return new_name, movie_storage.list_movies()
+
+        # Delete profile
+        if choice == str(len(profiles) + 2):
+            prompt_delete_user(profiles)
+            continue
 
         print(f"{RED}Invalid entry! Please select a valid option.{RESET}")

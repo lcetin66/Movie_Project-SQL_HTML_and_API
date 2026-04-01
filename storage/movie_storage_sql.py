@@ -238,5 +238,30 @@ def update_movie_note(title, note):
             print(f"{RED}Error: {e}{RESET}")
 
 
+def delete_user_profile(username):
+    """Deletes a user and all their associated movies from the database."""
+    with engine.connect() as conn:
+        try:
+            # 1. Get user id
+            result = conn.execute(text("SELECT id FROM users WHERE username = :name"), {"name": username})
+            row = result.fetchone()
+            if not row:
+                return False
+
+            user_id = row[0]
+
+            # 2. Delete movies
+            conn.execute(text("DELETE FROM movies WHERE user_id = :user_id"), {"user_id": user_id})
+
+            # 3. Delete user
+            conn.execute(text("DELETE FROM users WHERE id = :user_id"), {"user_id": user_id})
+
+            conn.commit()
+            return True
+        except SQLAlchemyError as e:
+            print(f"{RED}Error deleting user: {e}{RESET}")
+            return False
+
+
 # Initialize the database immediately when imported
 init_db()
