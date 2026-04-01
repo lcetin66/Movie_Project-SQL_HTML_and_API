@@ -2,6 +2,7 @@
 
 import random
 import requests
+import os
 import movie_storage_sql as storage
 from trm_colors import RED, GREEN, RESET
 
@@ -146,7 +147,7 @@ def command_add_movie(movies: dict[str, dict[str, int | float]]) -> None:
 
         storage.add_movie(title, year, rating, poster)
         # Update local dictionary so it shows up in "List movies" immediately
-        movies[title] = {"year": year, "rating": rating}
+        movies[title] = {"year": year, "rating": rating, "poster": poster}
         return
 
 
@@ -345,6 +346,36 @@ def movies_sorted_by_year(movies: dict[str, dict[str, int | float]]) -> None:
             rating = movies[movie]["rating"]
             print(f"{movie} {GREEN}{year}{RESET}, {rating}")
 
+def command_generate_website (movies: dict[str, dict[str, int | float]]) -> None:
+    """
+    Generate a website with the movie database.
+    """
+    with open("_static/index_template.html", "r", encoding="utf-8") as fileobject:
+        website_content = fileobject.read()
+        movie_grid = ""
+    for movie, data in movies.items():
+        poster = data.get('poster')
+        if poster:
+            poster_html = f'<img class="movie-poster" src="{poster}" alt="{movie}">'
+        else:
+            poster_html = '<img class="movie-poster" src="_static/no_poster.jpg" alt="No Poster">'
+        
+        movie_grid += f"""
+        <li>
+            <div class="movie">
+                {poster_html}
+                <div class="movie-title">{movie}</div>
+                <div class="movie-year">{data['year']}</div>
+            </div>
+        </li>
+        """
+    website_content = website_content.replace("__TEMPLATE_TITLE__", "My Movies Database").replace("__TEMPLATE_MOVIE_GRID__", movie_grid)
+    with open("_static/index.html", "w", encoding="utf-8") as fileobject:
+        fileobject.write(website_content)
+    file_path = os.path.abspath("_static/index.html")
+    print(f"{GREEN}Website generated successfully.{RESET}\n")
+    print(f"You can view the website at: {file_path}")
+
 
 def menu_selection(movies: dict[str, dict[str, int | float]]) -> None:
     """
@@ -360,7 +391,7 @@ def menu_selection(movies: dict[str, dict[str, int | float]]) -> None:
             6: lambda: random_movie_selection(movies),
             7: lambda: movie_part_searching(movies),
             8: lambda: movies_sorted_by_rating(movies),
-            9: lambda: movies_sorted_by_year(movies),
+            9: lambda: command_generate_website(movies),
         }
 
         try:
@@ -398,7 +429,7 @@ def start_menu() -> None:
         "6. Random movie",
         "7. Search movie",
         "8. Movies sorted by rating",
-        "9. Movies sorted by year"
+        "9. Generate website"
     ]
     for menu_list in menu:
         print(menu_list)

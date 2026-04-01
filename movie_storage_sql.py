@@ -32,12 +32,12 @@ def list_movies():
     with engine.connect() as conn:
         result = conn.execute(text("""
             SELECT 
-                title, year, rating 
+                title, year, rating, poster
             FROM movies
         """))
         movies = result.fetchall()
 
-    return {row[0]: {"year": row[1], "rating": row[2]} for row in movies}
+    return {row[0]: {"year": row[1], "rating": row[2], "poster": row[3]} for row in movies}
 
 
 def add_movie(title, year, rating, poster=None):
