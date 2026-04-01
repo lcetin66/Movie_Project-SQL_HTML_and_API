@@ -1,503 +1,361 @@
 """
-My Film Data Bank
+Module for movie management tasks, CLI menus, and website generation.
 """
 
-import random
 import os
+import json
 import webbrowser
+from statistics import mean
+
+import random
 import requests
-from storage import movie_storage_sql as storage
+import storage.movie_storage_sql as movie_storage
 from trm_colors import RED, GREEN, RESET
 
 
-def get_non_empty_input(prompt: str) -> str | None:
+def get_non_empty_input(msg: str) -> str:
     """
-    A common function for input fields that must not be left blank.
-    If the user leaves it blank, it will warn them and ask again.
+    Prompts user for input until a non-empty string is given.
+    Returns None if interrupted.
     """
     while True:
-        value = input(prompt).strip()
-
-        if value == "":
-            print(f"The movie title {RED}can't be left blank!{RESET}")
-            continue
-
-        if value == "0":
-            enter_to_continue()
+        try:
+            val = input(msg).strip()
+            if not val:
+                print(f"{RED}The input can't be left blank!{RESET}")
+                continue
+            return val
+        except (EOFError, KeyboardInterrupt):
             return None
 
-        return value
 
-
-def command_list_movies(movies: dict[str, dict[str, int | float]]) -> None:
-    """Retrieve and display all movies from the database."""
-    print(f"{RED}{len(movies)}{RESET} movies in total")
-    for movie, data in movies.items():
-        print(f"{movie} ({data['year']}): {data['rating']}")
-
-
-def get_omdb_user_api_key() -> str | None:
-    """
-    Get and validate API key from user.
-    Returns the key if valid, or None if invalid or blank.
-    """
-    # Check if API key is already saved
-    if os.path.exists("api_key.txt"):
-        with open("api_key.txt", "r", encoding="utf-8") as fileobject:
-            api_key = fileobject.read().strip()
-        print(f"{GREEN}Using saved API Key: {api_key}{RESET}")
-        return api_key
-
-    print("\n" + "=" * 60)
-    print("OMDB API Key Registration")
-    print("=" * 60)
-    print("\nTo use the movie search feature, you need an API key from OMDB.")
-    print("You can get a free API key by registering at:\nhttps://www.omdbapi.com/apikey.aspx")
-    print("\n" + "=" * 60 + "\n")
-
-    api_key = input("Please enter your OMDB API key: ").strip()
-    if not api_key:
-        print(f"{RED}API key can't be left blank!{RESET}")
-        return None
-
-    params = {
-        "apikey": api_key,
-        "s": "test"
-    }
-    try:
-        response = requests.get("http://www.omdbapi.com/", params=params, timeout=5)
-        data = response.json()
-
-        if data.get("Response") == "False":
-            error_msg = data.get("Error", "Unknown error")
-            print(f"{RED}Error: {error_msg}{RESET}")
-            return None
-
-        print(f"{GREEN}API Key is valid.{RESET}")
-        # Save the API key to a file
-        with open("api_key.txt", "w", encoding="utf-8") as fileobject:
-            fileobject.write(api_key)
-        return api_key
-
-    except requests.exceptions.RequestException as e:
-        print(f"{RED}Connection error: {e}{RESET}")
-        return None
-
-
-def get_omdb_movie_info(api_key: str, title: str) -> dict[str, str | int | float] | None:
-    """
-    Get movie information from OMDb API.
-    """
-    params = {
-        "apikey": api_key,
-        "t": title.strip()
-    }
-    try:
-        response = requests.get("http://www.omdbapi.com/", params=params, timeout=5)
-        movie_data = response.json()
-
-        if movie_data.get("Response") == "False":
-            return None
-
-        return movie_data
-    except requests.exceptions.RequestException as e:
-        print(f"{RED}Connection error: {e}{RESET}")
-        return None
-
-
-def command_add_movie(movies: dict[str, dict[str, int | float]]) -> None:
-    """
-    Prompt the user to enter a movie title, fetch its info from OMDb API,
-    and add it to the database.
-    """
-    api_key = get_omdb_user_api_key()
-    if not api_key:
+def command_list_movies(movies: dict[str, dict]) -> None:
+    """Prints all movies for the current user."""
+    if not movies:
+        print(f"{RED}No movies found!{RESET}")
         return
 
+    print(f"\n{GREEN}{len(movies)}{RESET} movies in total:")
+    for title, info in movies.items():
+        note_str = f" - Note: {info['note']}" if info.get('note') else ""
+        print(f"{title} ({info['year']}){note_str}")
+
+
+def command_add_movie(movies: dict[str, dict]) -> None:
+    """Fetches movie from OMDB and adds it to the user's storage."""
+    api_key_path = "api_key.txt"
+    if not os.path.exists(api_key_path):
+        print(f"{RED}No API key found in api_key.txt!{RESET}")
+        return
+
+    with open(api_key_path, "r", encoding="utf-8") as f:
+        api_key = f.read().strip()
+
     while True:
-        title = get_non_empty_input("Enter new movie name: ")
+        title = get_non_empty_input("\nEnter movie name: ")
         if title is None:
-            continue
-        if any(movie.lower() == title.lower() for movie in movies):
-            print(f'Movie "{RED}{title}{RESET}" already exists!')
-            continue
+            return
 
-        movie_data = get_omdb_movie_info(api_key, title)
+        print(f"Searching for '{title}' on OMDB...")
+        try:
+            url = f"http://www.omdbapi.com/?t={title}&apikey={api_key}"
+            response = requests.get(url, timeout=10)
+            movie_data = response.json()
+        except requests.RequestException as e:
+            print(f"{RED}Error connecting to API: {e}{RESET}")
+            return
 
-        poster = None
-        # If the movie is not found, notify user and ask if they want to manually enter details.
         if not movie_data or movie_data.get("Response") == "False":
-            print(f"{RED}The movie '{title}' does not exist on OMDb.{RESET}")
-            if input("Would you like to manually enter the movie details? (y/n): ").lower() != "y":
+            print(f"{RED}Error: Movie not found on OMDB!{RESET}")
+            if input("Enter manually? (y/n): ").lower() != "y":
                 continue
 
-            # Manual Input Fallback
-            year_input = get_non_empty_input("Enter a year: ")
-            if year_input is None:
-                return # Back to menu if user entered 0
-            try:
-                year = int(year_input)
-            except ValueError:
-                print("Invalid year.")
-                continue
-
-            rating_input = get_non_empty_input("Enter new movie rating (0-10): ")
-            if rating_input is None:
-                return # Back to menu if user entered 0
-            try:
-                rating = float(rating_input)
-            except ValueError:
-                print("Invalid rating.")
-                continue
-
-            poster = input("Enter movie poster URL (optional, press Enter to skip): ").strip()
-            if not poster:
-                poster = None
+            y_in = get_non_empty_input("Enter year: ")
+            if y_in is None:
+                return
+            year = int(y_in) if y_in.isdigit() else 0
+            rating, imdb_id, countries, full_data_json = 0.0, None, None, None
+            poster = None
         else:
-            # API Success - Use data from OMDb
             title = movie_data.get("Title", title)
-            # Fetch first 4 digits of Year (handles "2008-2013" cases)
             year_str = movie_data.get("Year", "0")
-            year_digits = ''.join(filter(str.isdigit, year_str))
-            year = int(year_digits[:4]) if year_digits else 0
-            
-            # Robust imdbRating parsing
+            year = int(year_str[:4]) if year_str[:4].isdigit() else 0
+
             rating_str = movie_data.get("imdbRating", "0")
             try:
                 rating = float(rating_str)
-            except ValueError:
+            except (ValueError, TypeError):
                 rating = 0.0
-                
-            poster = movie_data.get("Poster", "")
+
+            imdb_id = movie_data.get("imdbID", None)
+            countries = movie_data.get("Country", None)
+            full_data_json = json.dumps(movie_data)
+            poster = movie_data.get("Poster", None)
             if poster == "N/A":
                 poster = None
-                
-            print(f"Movie found: {GREEN}{title}{RESET} ({year}) - Rating: {rating}")
 
-        storage.add_movie(title, year, rating, poster)
-        # Update local dictionary so it shows up in "List movies" immediately
-        movies[title] = {"year": year, "rating": rating, "poster": poster}
+        movie_storage.add_movie(title, year, rating, poster, imdb_id, countries, full_data_json)
+        movies[title] = {
+            "year": year,
+            "rating": rating,
+            "poster": poster,
+            "note": None,
+            "imdb_id": imdb_id,
+            "countries": countries,
+            "full_data": full_data_json
+        }
         return
 
 
-def command_delete_movie(movies: dict[str, dict[str, int | float]]) -> None:
-    """
-    Prompt the user to enter a movie title and then delete it from the database.
-    Supports partial matching and asks for confirmation.
-    """
-    while True:
-        del_movie_name = get_non_empty_input("Enter movie name to delete (or 0 to cancel): ")
-        if del_movie_name is None:
-            return
-
-        # Find all movies that contain the input string (case-insensitive)
-        matches = [movie for movie in movies if del_movie_name.lower() in movie.lower()]
-
-        if not matches:
-            print(f'{RED}No movie found matching "{del_movie_name}"{RESET}')
-            continue
-
-        # If multiple movies found, list them and ask to be more specific
-        if len(matches) > 1:
-            print(f"\n{GREEN}Multiple movies found matching '{del_movie_name}':{RESET}")
-            for movie in matches:
-                info = movies[movie]
-                print(f"  - {movie} ({info['year']})")
-            print(f"\n{RED}Please enter the more specific movie name from the list above.{RESET}\n")
-            continue
-
-        # Exactly one match found
-        found_key = matches[0]
-        info = movies[found_key]
-        
-        while True:
-            confirm = input(f"Are you sure you want to delete '{RED}{found_key}{RESET}' ({info['year']})? (y/n): ").lower()
-            if confirm == 'n':
-                print("Deletion cancelled.")
-                return
-            if confirm == 'y':
-                break
-            print("Please enter 'y' or 'n'.")
-
-        storage.delete_movie(found_key)
-        del movies[found_key]  # Remove from local dictionary
-        break
-
-
-def command_update_movie(movies: dict[str, dict[str, int | float]]) -> None:
-    """
-    If the film exists, the user will be prompted to enter a new rating.
-    The film's rating will then be updated in the database. Input validation is not required.
-    """
-    while True:
-        edit_movie = get_non_empty_input("Enter movie name: ")
-        if edit_movie is None:
-            break
-
-        found_key = None
-        for movie_name in movies:
-            if movie_name.lower() == edit_movie.lower():
-                found_key = movie_name
-                break
-
-        if found_key is None:
-            print(f'Movie "{RED}{edit_movie}{RESET}" does not exist!')
-            continue
-
-        while True:
-            try:
-                edited_movie_rating = float(input("Enter new movie rating (0-10): "))
-                if 0 <= edited_movie_rating <= 10:
-                    break
-            except ValueError:
-                print(f"{RED}Enter a number between 0 and 10!{RESET}")
-
-        storage.update_movie(found_key, edited_movie_rating)
-        movies[found_key]["rating"] = edited_movie_rating # Update local dictionary
-        break
-
-
-def print_movies_by_rating(movies: dict[str, dict[str, int | float]]) -> None:
-    """
-    It prints the names of films with a specific rating. title: "Best" or "Worst"
-    """
-    ratings = []
-    for info in movies.values():
-        ratings.append(info["rating"])
-    best_rating = max(ratings)
-    worst_rating = min(ratings)
-    sum_of_ratings = sum(ratings)
-
-    best_movies = []
-    worst_movies = []
-    for title, info in movies.items():
-        if info["rating"] == best_rating:
-            best_movies.append(title)
-        if info["rating"] == worst_rating:
-            worst_movies.append(title)
-
-    print(f'Best movies ({GREEN}{best_rating}{RESET}):')
-    for movie in best_movies:
-        print(f"- {movie}")
-
-    print()
-
-    print(f'Worst movies ({RED}{worst_rating}{RESET}):')
-    for movie in worst_movies:
-        print(f"- {movie}")
-    print()
-    return ratings, best_movies, worst_movies, sum_of_ratings
-
-
-def movie_statistics(movies: dict[str, dict[str, int | float]]) -> None:
-    """
-    Output various statistics about the films in the database:
-    - Average film rating
-    - Median rating
-    - Best film
-    - Worst film
-    """
-    if not movies:
-        print(f"{RED}No movies found to calculate statistics.{RESET}")
+def command_delete_movie(movies: dict[str, dict]) -> None:
+    """Removes a movie from the user's list."""
+    title = get_non_empty_input("\nEnter movie name to delete: ")
+    if title is None:
         return
 
-    ratings, _, _, total_rating = print_movies_by_rating(movies)
-
-    # average
-    average_rating = round(total_rating / len(movies), 1)
-    print(f"Average rating: {GREEN}{average_rating}{RESET}")
-
-    # median
-    sorted_ratings = sorted(ratings)
-    length = len(sorted_ratings)
-
-    if length % 2 == 1:
-        median_rating = sorted_ratings[length // 2]
+    if title in movies:
+        movie_storage.delete_movie(title)
+        del movies[title]
+        print(f"Movie '{title}' deleted.")
     else:
-        median_rating = (sorted_ratings[length // 2 - 1] + sorted_ratings[length // 2]) / 2
-
-    print(f"Median rating: {GREEN}{round(median_rating, 1)}{RESET}")
+        print(f"{RED}Movie '{title}' not found!{RESET}")
 
 
-def random_movie_selection(movies: dict[str, dict[str, int | float]]) -> None:
-    """
-    Output a random movie from the database along with its rating.
-    """
-    random_movie = random.choice(list(movies.keys()))
-    rating = movies[random_movie]["rating"]
-    print(f"Your movie for tonight: {random_movie}, "
-          f"it's rated {GREEN}{rating}{RESET}")
+def command_update_movie(movies: dict[str, dict]) -> None:
+    """Allows user to add/edit a personal note for a movie."""
+    title = get_non_empty_input("\nEnter movie name: ")
+    if title is None:
+        return
+
+    if title in movies:
+        note = get_non_empty_input("Enter movie note: ")
+        if note is None:
+            return
+        movie_storage.update_movie_note(title, note)
+        movies[title]["note"] = note
+        print(f"Movie '{GREEN}{title}{RESET}' successfully updated.")
+    else:
+        print(f"{RED}Movie '{title}' not found!{RESET}")
 
 
-def movie_part_searching(movies):
-    """
-    If the user enters "the", the film The Shawshank Redemption should be found.
-    """
-    search_movie_part = input("Enter part of movie name: ").lower()
-    found = False
+def command_movie_stats(movies: dict[str, dict]) -> None:
+    """Calculates basic statistics for the movie ratings."""
+    if not movies:
+        print(f"{RED}No movies for stats!{RESET}")
+        return
 
-    for movie, info in movies.items():
-        if search_movie_part in movie.lower():
-            print(f'{movie} ({info["year"]}), {GREEN}{info["rating"]}{RESET}')
-            found = True
+    ratings = [m["rating"] for m in movies.values() if m.get("rating")]
+    if not ratings:
+        print(f"{RED}No rating data available.{RESET}")
+        return
 
-    if not found:
-        print(f"{RED}Movie not found{RESET}")
+    print("\nStats:")
+    print(f"- Average rating: {mean(ratings):.1f}")
 
-
-def movies_sorted_by_rating(movies: dict[str, dict[str, int | float]]) -> None:
-    """
-    Display all films with their ratings in descending order.
-    This means the highest-rated film is shown first and the lowest-rated film last.
-    """
-    movies_by_rating = {}
-    for movie, info in movies.items():
-        rating = info["rating"]
-        if rating not in movies_by_rating:
-            movies_by_rating[rating] = []
-        movies_by_rating[rating].append(movie)
-
-    sorted_rating = dict(sorted(movies_by_rating.items(), reverse=True))
-
-    for rating, movie_list in sorted_rating.items():
-        for movie in movie_list:
-            year = movies[movie]["year"]
-            print(f"{movie} ({year}), {GREEN}{rating}{RESET}")
-    return movies_by_rating
+    # Sort for best/worst
+    sorted_movies = sorted(movies.items(), key=lambda x: x[1]["rating"])
+    print(f"- Best movie: {sorted_movies[-1][0]} ({sorted_movies[-1][1]['rating']})")
+    print(f"- Worst movie: {sorted_movies[0][0]} ({sorted_movies[0][1]['rating']})")
 
 
-def movies_sorted_by_year(movies: dict[str, dict[str, int | float]]) -> None:
-    """
-    Movies are sorted from newest to oldest for “y” and from oldest to newest for “n”.
-    """
-    movies_by_year = {}
-    for movie, info in movies.items():
-        year = info["year"]
-        if year not in movies_by_year:
-            movies_by_year[year] = []
-        movies_by_year[year].append(movie)
-
-    while True:
-        reverse = input("Do you want the latest movies first? (Y/N) ").lower()
-        if reverse in ("y", "yes"):
-            select = True
-            break
-        if reverse in ("n", "no"):
-            select = False
-            break
-        print("Please enter Y or N.")
-
-    sorted_rating = dict(sorted(movies_by_year.items(), reverse=select))
-
-    for year, movie_list in sorted_rating.items():
-        for movie in movie_list:
-            rating = movies[movie]["rating"]
-            print(f"{movie} {GREEN}{year}{RESET}, {rating}")
+def command_random_movie(movies: dict[str, dict]) -> None:
+    """Picks a random movie from the dictionary."""
+    if not movies:
+        print(f"{RED}Empty list!{RESET}")
+        return
+    name = random.choice(list(movies.keys()))
+    print(f"\nRandom pick: {GREEN}{name}{RESET} ({movies[name]['rating']})")
 
 
-def command_generate_website(movies: dict[str, dict[str, int | float]]) -> None:
-    """
-    Generate a website with the movie database.
-    """
-    with open("_static/index_template.html", "r", encoding="utf-8") as fileobject:
-        website_content = fileobject.read()
-        movie_grid = ""
-    for movie, data in movies.items():
-        poster = data.get('poster')
-        if poster:
-            poster_html = f'<img class="movie-poster" src="{poster}" alt="{movie}">'
-        else:
-            poster_html = '<img class="movie-poster" src="no_poster.jpg" alt="No Poster">'
+def get_flag_html(countries_str: str) -> str:
+    """Helper to convert OMBd Country string to FlagCDN img tags."""
+    if not countries_str:
+        return ""
 
-        movie_grid += f"""
-        <li>
-            <div class="movie">
-                {poster_html}
-                <div class="movie-title">{movie}</div>
-                <div class="movie-year">{data['year']}</div>
-            </div>
-        </li>
+    mapping = {
+        "USA": "us", "UK": "gb", "United Kingdom": "gb", "Germany": "de",
+        "France": "fr", "Italy": "it", "Spain": "es", "Canada": "ca",
+        "Turkey": "tr", "Japan": "jp", "South Korea": "kr", "China": "cn",
+        "India": "in", "Australia": "au", "Denmark": "dk", "Sweden": "se"
+    }
+
+    countries = [c.strip() for c in countries_str.split(",")]
+    flags = ""
+    for country in countries[:2]:
+        code = mapping.get(country)
+        if code:
+            flags += (f'<img src="https://flagcdn.com/16x12/{code}.png" '
+                      f'alt="{country}" style="margin-left: 5px; vertical-align: '
+                      f'middle;" title="{country}">')
+    return flags
+
+
+def command_generate_website(movies: dict[str, dict], username: str = "index") -> None:
+    """Generate static HTML website and individual detail pages."""
+    static_dir = "_static"
+    details_dir = os.path.join(static_dir, "details")
+    os.makedirs(details_dir, exist_ok=True)
+
+    template_path = os.path.join(static_dir, "index_template.html")
+    filename = f"{username.lower()}.html" if username else "index.html"
+    output_path = os.path.join(static_dir, filename)
+
+    if not os.path.exists(template_path):
+        print(f"{RED}Error: Template file not found at {template_path}{RESET}")
+        return
+
+    with open(template_path, "r", encoding="utf-8") as f_in:
+        template = f_in.read()
+
+    movie_grid_html = ""
+    for title, info in movies.items():
+        imdb_id = info.get("imdb_id", "tt0000000")
+        poster_url = (info.get("poster") or
+                      "https://via.placeholder.com/200x300?text=No+Poster")
+        note = info.get("note") or ""
+        year = info.get("year", "Unknown")
+        countries = info.get("countries")
+        flags_html = get_flag_html(countries)
+
+        # Create individual Detail Page
+        detail_filename = f"{imdb_id}.html"
+        detail_path = os.path.join(details_dir, detail_filename)
+        generate_detail_page(detail_path, title, info)
+
+        imdb_url = f'https://www.imdb.com/title/{imdb_id}/'
+        local_detail_url = f"details/{detail_filename}"
+        note_html = f'<div class="movie-note">{note}</div>' if note else ""
+
+        movie_grid_html += f"""
+            <li>
+                <div class="movie">
+                    <div class="poster-container">
+                        <a href="{imdb_url}" target="_blank">
+                            <img class="movie-poster" src="{poster_url}" alt="{title}"/>
+                        </a>
+                        {note_html}
+                    </div>
+                    <div class="movie-title">{title}</div>
+                    <div class="movie-info-row">
+                        <span class="movie-year">{year}</span>
+                        <span class="movie-flags">{flags_html}</span>
+                        <a href="{local_detail_url}" class="info-btn">ⓘ Info</a>
+                    </div>
+                </div>
+            </li>
         """
-    website_content = website_content.replace(
-        "__TEMPLATE_TITLE__", "My Movies Database"
-    ).replace(
-        "__TEMPLATE_MOVIE_GRID__", movie_grid
-    )
-    with open("_static/index.html", "w", encoding="utf-8") as fileobject:
-        fileobject.write(website_content)
-    file_path = os.path.abspath("_static/index.html")
-    print(f"{GREEN}Website generated successfully.{RESET}\n")
-    print(f"You can view the website at: file://{file_path}")
-    webbrowser.open(f"file://{file_path}")
+
+    new_html = template.replace("__TEMPLATE_TITLE__", f"{username}'s Favorite Movies")
+    new_html = new_html.replace("__TEMPLATE_MOVIE_GRID__", movie_grid_html)
+
+    with open(output_path, "w", encoding="utf-8") as f_out:
+        f_out.write(new_html)
+
+    print(f"{GREEN}Website and detail pages generated successfully!{RESET}")
+    webbrowser.open(f"file://{os.path.abspath(output_path)}")
 
 
-def menu_selection(movies: dict[str, dict[str, int | float]]) -> None:
+def generate_detail_page(path, title, info):
+    """Creates a detailed IMDb-style page for a single movie."""
+    data = {}
+    try:
+        if info.get("full_data"):
+            data = json.loads(info["full_data"])
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    fields = [
+        "Director", "Actors", "Genre", "Runtime",
+        "Released", "Awards", "BoxOffice", "Plot"
+    ]
+    details_html = ""
+    for field in fields:
+        val = data.get(field, "N/A")
+        if val != "N/A":
+            details_html += f"<p><strong>{field}:</strong> {val}</p>"
+
+    html = f"""
+    <html>
+    <head>
+        <title>{title} - Details</title>
+        <link rel="stylesheet" href="../style.css" />
+        <style>
+            .detail-container {{
+                display: flex;
+                padding: 50px;
+                max-width: 1000px;
+                margin: auto;
+                background: #1e1e1e;
+                margin-top: 50px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            }}
+            .detail-poster {{
+                width: 300px;
+                height: 450px;
+                object-fit: cover;
+                border-radius: 8px;
+            }}
+            .detail-content {{ padding-left: 40px; flex: 1; }}
+            .back-btn {{
+                color: #27ae60;
+                text-decoration: none;
+                display: inline-block;
+                margin-bottom: 20px;
+            }}
+        </style>
+    </head>
+    <body style="background: #121212; color: white; font-family: Segoe UI, sans-serif;">
+        <div class="detail-container">
+            <div>
+                <img src="{info.get('poster')}" class="detail-poster">
+            </div>
+            <div class="detail-content">
+                <a href="javascript:history.back()" class="back-btn">← Back to List</a>
+                <h1>{title} ({info.get('year')})</h1>
+                <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+                {details_html}
+            </div>
+        </div>
+    </body>
+    </html>
     """
-    Movie database menu selection
-    """
+    with open(path, "w", encoding="utf-8") as f_out:
+        f_out.write(html)
+
+
+def menu_selection(movies: dict, username: str) -> bool:
+    """Main menu selection controller."""
     while True:
+        print(f"\n********** My Movies Database ({username}) **********")
+        print("\n0. Exit")
+        print("1. List movies")
+        print("2. Add movie")
+        print("3. Delete movie")
+        print("4. Enter movie note")
+        print("5. Stats")
+        print("6. Random")
+        print("7. Website")
+        print("8. Switch User")
+
+        choice_in = input("\nEnter choice (0-8): ").strip()
+        if choice_in == "0":
+            return False
+        if choice_in == "8":
+            return True
+
         actions = {
-            1: lambda: command_list_movies(movies),
-            2: lambda: command_add_movie(movies),
-            3: lambda: command_delete_movie(movies),
-            4: lambda: command_update_movie(movies),
-            5: lambda: movie_statistics(movies),
-            6: lambda: random_movie_selection(movies),
-            7: lambda: movie_part_searching(movies),
-            8: lambda: movies_sorted_by_rating(movies),
-            9: lambda: command_generate_website(movies),
+            "1": lambda: command_list_movies(movies),
+            "2": lambda: command_add_movie(movies),
+            "3": lambda: command_delete_movie(movies),
+            "4": lambda: command_update_movie(movies),
+            "5": lambda: command_movie_stats(movies),
+            "6": lambda: command_random_movie(movies),
+            "7": lambda: command_generate_website(movies, username),
         }
 
-        try:
-            menu_choice = int(input("Enter choice (0-9): "))
-            print()
-        except ValueError:
-            print(f"{RED}Your selection must be an integer between 0-9!{RESET}")
-            continue
-
-        if menu_choice == 0:
-            print("Bye!\n")
-            break
-
-        if menu_choice not in actions:
-            print(f"Your selection must be an integer between {RED}0-9!{RESET}")
-            continue
-
-        actions[menu_choice]()
-        enter_to_continue()
-
-
-def start_menu() -> None:
-    """
-    Menu list that opens after each transaction
-    """
-    print("*" * 10 + " My Movies Database " + "*" * 10)
-    print()
-    menu = [
-        "0. Exit",
-        "1. List movies",
-        "2. Add movie",
-        "3. Delete movie",
-        "4. Update movie",
-        "5. Stats",
-        "6. Random movie",
-        "7. Search movie",
-        "8. Movies sorted by rating",
-        "9. Generate website"
-    ]
-    for menu_list in menu:
-        print(menu_list)
-    print()
-
-
-def enter_to_continue() -> None:
-    """
-    User's transaction progress check
-    """
-    print()
-    while True:
-        choice_continue = input("Press enter to continue")
-        if choice_continue == "":
-            print()
-            start_menu()
-            break
+        if choice_in in actions:
+            actions[choice_in]()
+            input("\nPress enter to continue...")
+        else:
+            print(f"{RED}Invalid entry!{RESET}")

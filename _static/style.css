@@ -1,52 +1,161 @@
+:root {
+    --bg-color: #121212;
+    --card-bg: #1e1e1e;
+    --text-primary: #ffffff;
+    --text-secondary: #aaaaaa;
+    --accent-color: #009B50;
+    --note-bg: rgba(255, 255, 255, 0.05);
+}
+
 body {
-    background: #F5F5F0;
-    color: black;
-    font-family: Monaco;
+    background: var(--bg-color);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
 .list-movies-title {
-    padding: 10px 0;
-    background: #009B50;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, var(--accent-color), #27ae60);
     color: white;
     text-align: center;
-    font-size: 16pt;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.list-movies-title h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
 }
 
 .movie-grid {
     list-style-type: none;
-    padding: 0;
+    padding: 40px;
     margin: 0;
-    margin-top: 20px;
-    display: flex;
+    margin-top: 50px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 180px));
+    gap: 40px;
     justify-content: center;
-}
-
-.movie-grid li {
-    padding: 10px 15px;
-    text-align: left;
+    justify-items: center;
 }
 
 .movie {
-    width: 140px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    overflow: visible;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    width: 100%;
 }
 
-.movie-title,
-.movie-year {
-    font-size: 0.8em;
-    text-align: center;
+.poster-container {
+    position: relative;
+    width: 100%;
+}
+
+.movie-poster {
+    width: 180px;  /* Genişliği sabitledik */
+    height: 270px; /* Yüksekliği sabitledik (2:3 oranında) */
+    object-fit: cover; /* Resmi kutuya sığdırıp fazla kısımları kırpar */
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    display: block;
+}
+
+.movie:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    z-index: 2000;
 }
 
 .movie-title {
-    margin-top: 10px;
+    padding: 12px 10px 5px 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+    /* Başlık alanını sabitleyerek hizalamayı koruyoruz */
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    line-height: 1.2;
+}
+
+.movie-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 10px 15px 10px;
 }
 
 .movie-year {
-    color: #999;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
 }
 
+.movie-flags {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+}
 
-.movie-poster {
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
-    width: 128px;
-    height: 193px;
+.info-btn {
+    background: var(--accent-color);
+    color: white;
+    text-decoration: none;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.3s;
+    font-weight: bold;
+}
+
+.info-btn:hover {
+    background: #27ae60;
+}
+
+.movie-note {
+    position: absolute;
+    bottom: 20px;
+    left: 105%;
+    width: 150px;
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    padding: 10px;
+    border-left: 4px solid var(--accent-color);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.85rem;
+    font-style: italic;
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 9999;
+}
+
+.movie-note::after {
+    content: "";
+    position: absolute;
+    top: 15px;
+    right: 100%;
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent #2c3e50 transparent transparent;
+}
+
+.poster-container:hover .movie-note {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(10px);
+}
+
+@media (max-width: 480px) {
+    .movie-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        padding: 20px;
+        gap: 15px;
+    }
 }

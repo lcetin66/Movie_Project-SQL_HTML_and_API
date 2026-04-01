@@ -1,15 +1,31 @@
 """
-Main function to run the movie database application.
+Main entry point for the Multi-User Movie Database application.
 """
 
-from storage import movie_storage_sql as storage
-from movies import start_menu, menu_selection
+from users import user_selection_screen
+from movies import menu_selection
 
-def main() -> None:
-    """Main function to run the movie database application."""
-    start_menu() # Menu list
-    movies = storage.list_movies()
-    menu_selection(movies) # Menu choice
+
+def main():
+    """
+    Main application loop. Handles profile selection and jumps into
+    the main movie database menu for that user.
+    """
+    while True:
+        # Step 1: Login / Profile Selection
+        selection = user_selection_screen()
+        if selection is None:
+            break
+
+        username, movies = selection
+
+        # Step 2: Main Movie Application Loop
+        while True:
+            should_switch_user = menu_selection(movies, username)
+
+            if not should_switch_user:
+                print("\nShutting down. Enjoy your movies! 🎥🍿\n")
+                return
 
 
 if __name__ == "__main__":
