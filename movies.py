@@ -374,7 +374,7 @@ def command_generate_website (movies: dict[str, dict[str, int | float]]) -> None
         fileobject.write(website_content)
     file_path = os.path.abspath("_static/index.html")
     print(f"{GREEN}Website generated successfully.{RESET}\n")
-    print(f"You can view the website at: {file_path}")
+    print(f"You can view the website at: file://{file_path}")
 
 
 def menu_selection(movies: dict[str, dict[str, int | float]]) -> None:
